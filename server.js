@@ -9,7 +9,6 @@ import { addLocalVariables } from './src/middleware/global.js';
 
 import session from 'express-session';
 import connectPgSimple from 'connect-pg-simple';
-import { caCert } from './src/models/db.js';
 
 import { startSessionCleanup } from './src/utils/session-cleanup.js';
 
@@ -52,11 +51,7 @@ app.use(session({
     store: new pgSession({
         conObject: {
             connectionString: process.env.DB_URL,
-            ssl: {
-                ca: caCert,
-                rejectUnauthorized: true,
-                checkServerIdentity: () => { return undefined; }
-            }
+            ssl: { rejectUnauthorized: false }
         },
         tableName: 'session',
         createTableIfMissing: true

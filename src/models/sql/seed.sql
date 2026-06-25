@@ -1,256 +1,188 @@
--- Database seed file for student course catalog
--- This file creates tables and inserts all initial data
+-- Deadweight database seed and schema
+-- Defines the core production schema and sample data for Deadweight,
+-- a student move-out storage service.
 
 BEGIN;
 
--- Drop existing tables (in reverse dependency order)
-DROP TABLE IF EXISTS catalog CASCADE;
-DROP TABLE IF EXISTS faculty CASCADE;
-DROP TABLE IF EXISTS courses CASCADE;
-DROP TABLE IF EXISTS departments CASCADE;
+-- ---------------------------------------------------------------------------
+-- Clean slate: drop in reverse dependency order, plus custom types
+-- ---------------------------------------------------------------------------
+DROP TABLE IF EXISTS item_images CASCADE;
+DROP TABLE IF EXISTS reviews CASCADE;
+DROP TABLE IF EXISTS status_history CASCADE;
+DROP TABLE IF EXISTS storage_requests CASCADE;
+DROP TABLE IF EXISTS contact_messages CASCADE;
+DROP TABLE IF EXISTS users CASCADE;
+DROP TYPE IF EXISTS request_status;
+DROP TYPE IF EXISTS user_role;
 
--- Create departments table
-CREATE TABLE departments (
-    id INTEGER PRIMARY KEY,
-    code VARCHAR(20) UNIQUE NOT NULL,
-    name VARCHAR(200) UNIQUE NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+-- ---------------------------------------------------------------------------
+-- Custom enum types (DB-level data integrity)
+-- ---------------------------------------------------------------------------
+-- Three roles map to the business: owner (full admin), staff (employees who
+-- handle pickups/requests), and customer (the student storing belongings).
+CREATE TYPE user_role AS ENUM ('owner', 'staff', 'customer');
+
+-- One defined, ordered set of workflow stages, used everywhere a status
+-- appears. The request moves: requested -> approved -> awaiting_pickup ->
+-- in_storage -> out_for_return -> returned.
+CREATE TYPE request_status AS ENUM (
+    'requested',
+    'approved',
+    'awaiting_pickup',
+    'in_storage',
+    'out_for_return',
+    'returned'
 );
 
--- Create courses table
-CREATE TABLE courses (
-    id SERIAL PRIMARY KEY,
-    course_code VARCHAR(20) UNIQUE NOT NULL,
-    name VARCHAR(200) NOT NULL,
-    description TEXT,
-    credit_hours INTEGER NOT NULL CHECK (credit_hours > 0),
-    department_id INTEGER NOT NULL,
-    slug VARCHAR(250) UNIQUE NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (department_id) REFERENCES departments(id)
+-- ---------------------------------------------------------------------------
+-- users
+-- ---------------------------------------------------------------------------
+CREATE TABLE users (
+    id          SERIAL PRIMARY KEY,
+    name        VARCHAR(255) NOT NULL,
+    email       VARCHAR(255) UNIQUE NOT NULL,
+    password    VARCHAR(255) NOT NULL,          -- bcrypt hash, never plain text
+    role        user_role NOT NULL DEFAULT 'customer',
+    created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- Create faculty table
-CREATE TABLE faculty (
-    id SERIAL PRIMARY KEY,
-    first_name VARCHAR(100) NOT NULL,
-    last_name VARCHAR(100) NOT NULL,
-    office VARCHAR(50),
-    phone VARCHAR(20),
-    email VARCHAR(150) UNIQUE NOT NULL,
-    department_id INTEGER NOT NULL,
-    title VARCHAR(100),
-    gender VARCHAR(1),
-    slug VARCHAR(200) UNIQUE NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (department_id) REFERENCES departments(id)
+-- ---------------------------------------------------------------------------
+-- contact_messages
+-- user_id is nullable + SET NULL: non-registered visitors can contact us,
+-- and deleting a user shouldn't erase the message history.
+-- ---------------------------------------------------------------------------
+CREATE TABLE contact_messages (
+    id           SERIAL PRIMARY KEY,
+    user_id      INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    name         VARCHAR(255) NOT NULL,
+    email        VARCHAR(255) NOT NULL,
+    subject      VARCHAR(255) NOT NULL,
+    message      TEXT NOT NULL,
+    status       VARCHAR(20) NOT NULL DEFAULT 'received'
+                 CHECK (status IN ('received', 'replied', 'closed')),
+    received_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- Create catalog table
-CREATE TABLE catalog (
-    id SERIAL PRIMARY KEY,
-    course_slug VARCHAR(250) NOT NULL,
-    faculty_slug VARCHAR(200) NOT NULL,
-    time VARCHAR(100) NOT NULL,
-    room VARCHAR(50) NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(course_slug, faculty_slug, time, room)
+-- ---------------------------------------------------------------------------
+-- storage_requests  (the core resource + workflow)
+-- user_id CASCADE: a request belongs to its owner; if the account is deleted,
+-- the request goes with it.
+-- ---------------------------------------------------------------------------
+CREATE TABLE storage_requests (
+    id                SERIAL PRIMARY KEY,
+    user_id           INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    item_name         VARCHAR(255) NOT NULL,
+    item_description  TEXT,
+    requested_volume  NUMERIC(8,2) NOT NULL CHECK (requested_volume >= 0),
+    pickup_date       DATE,
+    return_date       DATE,
+    current_status    request_status NOT NULL DEFAULT 'requested',
+    notes             TEXT,
+    created_at        TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at        TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- Insert departments
-INSERT INTO departments (id, code, name) VALUES
-    (0, 'CS', 'Computer Science'),
-    (1, 'MATH', 'Mathematics'),
-    (2, 'ENG', 'English'),
-    (3, 'INTL', 'International Studies'),
-    (4, 'REL', 'Religious Education'),
-    (5, 'GEN', 'General Studies'),
-    (6, 'ENGR', 'Engineering'),
-    (7, 'PHYS', 'Physics'),
-    (8, 'CHEM', 'Chemistry'),
-    (9, 'BIO', 'Biology'),
-    (10, 'ECON', 'Economics'),
-    (11, 'HIST', 'History');
+-- ---------------------------------------------------------------------------
+-- status_history  (every stage change is logged for the timeline view)
+-- request CASCADE: history is meaningless without its request.
+-- changed_by SET NULL: keep the history even if the staff member is removed.
+-- ---------------------------------------------------------------------------
+CREATE TABLE status_history (
+    id                  SERIAL PRIMARY KEY,
+    storage_request_id  INTEGER NOT NULL REFERENCES storage_requests(id) ON DELETE CASCADE,
+    status              request_status NOT NULL,
+    changed_by          INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    note                TEXT,
+    changed_at          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
 
--- Insert courses
-INSERT INTO courses (course_code, name, description, credit_hours, department_id, slug) VALUES
-    ('CSE 110', 'Introduction to Programming', 'Fundamentals of programming using Python. Introduction to problem solving, algorithm development, and basic programming concepts including variables, control structures, and functions.', 2, 0, 'cse-110'),
-    ('CSE 111', 'Programming with Functions', 'Learn to become a more organized, efficient, and capable computer programmer by researching and calling functions written by others; writing, calling, debugging, and testing your own functions.', 2, 0, 'cse-111'),
-    ('CSE 210', 'Programming with Classes', 'Introduction to the notion of classes and objects. Presents encapsulation at a conceptual level and works with inheritance and polymorphism.', 3, 0, 'cse-210'),
-    ('CSE 212', 'Programming with Data Structures', 'Data structures and algorithms including dynamic arrays, linked lists, stacks, queues, trees, graphs, and hash tables. Algorithm analysis and Big O notation.', 3, 0, 'cse-212'),
-    ('CSE 310', 'Operating Systems', 'Operating system concepts including processes, threads, CPU scheduling, memory management, file systems, and system security.', 3, 0, 'cse-310'),
-    ('CSE 340', 'Software Engineering', 'Software development lifecycle, requirements analysis, design patterns, testing strategies, and project management in software development.', 3, 0, 'cse-340'),
-    ('CSE 398', 'Computer Science Internship', 'Supervised work experience in computer science. Students apply classroom knowledge in real-world professional settings.', 3, 0, 'cse-398'),
-    ('CIT 160', 'Introduction to Programming', 'Fundamental programming concepts using modern programming languages. Problem solving, algorithm development, and basic programming structures.', 3, 0, 'cit-160'),
-    ('CIT 241', 'Network Routing and Switching', 'Initial router configuration, Cisco IOS Software management, routing protocol configuration, TCP/IP, and access control lists (ACLs).', 3, 0, 'cit-241'),
-    ('CIT 260', 'Object Oriented Programming', 'Fundamentals of Object Oriented Programming using Java. Classes, objects, inheritance, polymorphism, and graphical user interfaces.', 3, 0, 'cit-260'),
-    ('CIT 336', 'Web Backend Development', 'Server-side web development using modern frameworks and databases. RESTful APIs, authentication, and data management.', 3, 0, 'cit-336'),
-    ('WDD 130', 'Web Fundamentals', 'Introduction to web development using HTML and CSS. Basic web page structure, styling, and responsive design principles.', 2, 0, 'wdd-130'),
-    ('WDD 230', 'Web Frontend Development I', 'Advanced HTML, CSS, and JavaScript. DOM manipulation, event handling, and modern web development tools and practices.', 3, 0, 'wdd-230'),
-    ('WDD 330', 'Web Frontend Development II', 'Advanced JavaScript frameworks and libraries. Single page applications, state management, and modern frontend development patterns.', 3, 0, 'wdd-330'),
-    ('WDD 430', 'Full Stack Development', 'Integration of frontend and backend technologies. Database design, API development, and deployment of full-stack web applications.', 3, 0, 'wdd-430'),
-    ('MATH 108X', 'Mathematics Preparation', 'Preparation for college-level mathematics. Review of algebra, geometry, and trigonometry concepts needed for calculus.', 3, 1, 'math-108x'),
-    ('MATH 112', 'Calculus I', 'Limits, derivatives, and applications of derivatives. Introduction to integration and the Fundamental Theorem of Calculus.', 4, 1, 'math-112'),
-    ('MATH 113', 'Calculus II', 'Integration techniques, applications of integration, infinite sequences and series, parametric equations, and polar coordinates.', 4, 1, 'math-113'),
-    ('MATH 215', 'Calculus III', 'Multivariable calculus including partial derivatives, multiple integrals, vector fields, line integrals, and surface integrals.', 4, 1, 'math-215'),
-    ('MATH 221', 'Statistics', 'Descriptive statistics, probability distributions, hypothesis testing, confidence intervals, regression analysis, and ANOVA.', 3, 1, 'math-221'),
-    ('MATH 280', 'Topics in Pure Mathematics', 'Advanced mathematical topics including proof techniques, set theory, number theory, and abstract algebra concepts.', 3, 1, 'math-280'),
-    ('MATH 341', 'Differential Equations', 'First and second order differential equations, systems of differential equations, and applications to physical and biological systems.', 3, 1, 'math-341'),
-    ('ENG 106', 'English Preparation', 'Development of basic writing skills including grammar, sentence structure, paragraph development, and essay organization.', 3, 2, 'eng-106'),
-    ('ENG 150', 'Writing and Reasoning Foundations', 'Academic writing with emphasis on critical thinking, research skills, and argumentation. Introduction to various rhetorical modes.', 3, 2, 'eng-150'),
-    ('ENG 250', 'Writing and Research', 'Advanced academic writing with emphasis on research methodology, source evaluation, and scholarly communication.', 3, 2, 'eng-250'),
-    ('ENG 216', 'Technical Writing', 'Writing for technical and professional audiences. Reports, proposals, manuals, and other forms of workplace communication.', 3, 2, 'eng-216'),
-    ('ENG 295', 'Literature and Film', 'Study of literary works and their film adaptations. Analysis of narrative techniques, themes, and cultural contexts.', 3, 2, 'eng-295'),
-    ('ENG 324', 'Shakespeare', 'Study of selected plays and sonnets by William Shakespeare with attention to language, themes, and historical context.', 3, 2, 'eng-324'),
-    ('ENG 381', 'American Literature', 'Survey of American literature from colonial period to present, including major authors, movements, and cultural influences.', 3, 2, 'eng-381'),
-    ('INTL 201', 'Introduction to International Studies', 'Overview of global issues, international relations theory, and cross-cultural analysis of political, economic, and social systems.', 3, 3, 'intl-201'),
-    ('INTL 301', 'Comparative Politics', 'Comparative analysis of political systems, governance structures, and policy-making processes across different nations.', 3, 3, 'intl-301'),
-    ('INTL 350', 'International Economics', 'Economic principles applied to international trade, finance, development, and global economic institutions.', 3, 3, 'intl-350'),
-    ('INTL 401', 'Global Issues Seminar', 'In-depth analysis of contemporary global challenges including security, environment, human rights, and economic development.', 3, 3, 'intl-401'),
-    ('REL 121', 'The Eternal Family', 'Doctrinal foundations of the family, marriage preparation, and principles of successful family relationships from an LDS perspective.', 2, 4, 'rel-121'),
-    ('REL 250', 'The Living Christ', 'Study of the life, mission, and teachings of Jesus Christ as recorded in the New Testament and modern revelation.', 2, 4, 'rel-250'),
-    ('FDMAT 108', 'Mathematics for Life', 'Practical applications of mathematics in personal finance, statistics, and problem-solving for daily life.', 3, 1, 'fdmat-108'),
-    ('FDENG 101', 'Writing and Communication', 'Foundational writing and communication skills for academic and professional success.', 3, 2, 'fdeng-101'),
-    ('GS 170', 'Foundations of Learning', 'Study skills, time management, goal setting, and strategies for academic success in higher education.', 2, 5, 'gs-170'),
-    ('ECEN 160', 'Introduction to Electrical Engineering', 'Fundamentals of electrical engineering including circuit analysis, Ohms law, and basic electronic components.', 3, 6, 'ecen-160'),
-    ('PHYS 121', 'University Physics I', 'Mechanics, wave motion, and thermodynamics with calculus-based approach. Laboratory component included.', 4, 7, 'phys-121'),
-    ('CHEM 111', 'General Chemistry I', 'Fundamental principles of chemistry including atomic structure, bonding, stoichiometry, and thermochemistry.', 4, 8, 'chem-111'),
-    ('BIO 111', 'General Biology I', 'Introduction to biological principles including cell structure, metabolism, genetics, and evolution.', 4, 9, 'bio-111'),
-    ('ECON 151', 'Macroeconomics', 'Introduction to macroeconomic principles including national income, inflation, unemployment, and fiscal policy.', 3, 10, 'econ-151'),
-    ('HIST 170', 'Foundations of the Restoration', 'History of the restoration of the Gospel of Jesus Christ through the Prophet Joseph Smith and the early Church.', 2, 11, 'hist-170');
+-- ---------------------------------------------------------------------------
+-- reviews
+-- user_id CASCADE: a user's reviews are theirs.
+-- storage_request_id SET NULL: a review can outlive the specific request it
+-- referenced (kept as general service feedback).
+-- ---------------------------------------------------------------------------
+CREATE TABLE reviews (
+    id                  SERIAL PRIMARY KEY,
+    user_id             INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    storage_request_id  INTEGER REFERENCES storage_requests(id) ON DELETE SET NULL,
+    rating              INTEGER NOT NULL CHECK (rating BETWEEN 1 AND 5),
+    comment             TEXT,
+    created_at          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
 
--- Insert faculty
-INSERT INTO faculty (first_name, last_name, office, phone, email, department_id, title, gender, slug) VALUES
-    ('Nathan', 'Jack', 'STC 310A', '208-496-7622', 'jackn@byui.edu', 0, 'Department Chair', 'm', 'nathan-jack'),
-    ('Jason', 'Allred', 'STC 310B', '208-496-7607', 'allredjas@byui.edu', 0, 'Associate Chair', 'm', 'jason-allred'),
-    ('Adam', 'Hayes', 'STC 310C', '208-496-3782', 'hayesa@byui.edu', 0, 'Associate Chair', 'm', 'adam-hayes'),
-    ('Nate', 'Phillips', 'STC 310D', '208-496-7625', 'phillipsn@byui.edu', 0, 'Associate Chair', 'm', 'nate-phillips'),
-    ('William', 'Clements', 'STC 310E', '208-496-7617', 'clementsw@byui.edu', 0, 'Program Lead', 'm', 'william-clements'),
-    ('Zachariah', 'Alvey', 'STC 330A', '208-496-3741', 'alveyz@byui.edu', 0, 'Professor', 'm', 'zachariah-alvey'),
-    ('Bradley', 'Armstrong', 'STC 330B', '208-496-3766', 'armstrongb@byui.edu', 0, 'Professor', 'm', 'bradley-armstrong'),
-    ('Lee', 'Barney', 'STC 330C', '208-496-3767', 'barneyl@byui.edu', 0, 'Professor', 'm', 'lee-barney'),
-    ('Rex', 'Barzee', 'STC 330D', '208-496-3768', 'barzeer@byui.edu', 0, 'Professor', 'm', 'rex-barzee'),
-    ('Scott', 'Burton', 'STC 330E', '208-496-7614', 'burtons@byui.edu', 0, 'Professor', 'm', 'scott-burton'),
-    ('Christopher', 'Keers', 'STC 330F', '208-496-7604', 'keersc@byui.edu', 0, 'Professor', 'm', 'christopher-keers'),
-    ('Julie Ann', 'Anderson', 'STC 330G', '208-496-4505', 'andersonju@byui.edu', 0, 'Professor', 'f', 'julie-ann-anderson'),
-    ('Joelle', 'Moen', 'GEB 205A', '208-496-4391', 'moenj@byui.edu', 2, 'Department Chair', 'f', 'joelle-moen'),
-    ('Josh', 'Allen', 'GEB 205B', '208-496-4366', 'allenj@byui.edu', 2, 'Professor', 'm', 'josh-allen'),
-    ('Matt', 'Babcock', 'GEB 205C', '208-496-4367', 'babcockm@byui.edu', 2, 'Professor', 'm', 'matt-babcock'),
-    ('Jeremy', 'Bailey', 'GEB 205D', '208-496-4405', 'baileyj@byui.edu', 2, 'Professor', 'm', 'jeremy-bailey'),
-    ('Tom', 'Ballard', 'GEB 205E', '208-496-4342', 'ballardt@byui.edu', 2, 'Professor', 'm', 'tom-ballard'),
-    ('Mark', 'Bennion', 'GEB 205F', '208-496-4368', 'bennionm@byui.edu', 2, 'Professor', 'm', 'mark-bennion'),
-    ('William', 'Brugger', 'GEB 205G', '208-496-4370', 'bruggerw@byui.edu', 2, 'Professor', 'm', 'william-brugger'),
-    ('Curtis', 'Chandler', 'GEB 205H', '208-496-4132', 'chandlerc@byui.edu', 2, 'Professor', 'm', 'curtis-chandler'),
-    ('Anna', 'Durfee', 'GEB 205I', '208-496-4304', 'durfeean@byui.edu', 2, 'Professor', 'f', 'anna-durfee'),
-    ('Elaine', 'Wagner', 'MC 301A', '208-496-7556', 'wagnere@byui.edu', 1, 'Department Chair', 'f', 'elaine-wagner'),
-    ('Brett', 'Amidan', 'MC 301B', '208-496-7563', 'amidanb@byui.edu', 1, 'Professor', 'm', 'brett-amidan'),
-    ('Dave', 'Brown', 'MC 301C', '208-496-7527', 'brownd@byui.edu', 1, 'Professor', 'm', 'dave-brown'),
-    ('Greg', 'Cameron', 'MC 301D', '208-496-7528', 'camerong@byui.edu', 1, 'Professor', 'm', 'greg-cameron'),
-    ('Paul', 'Cannon', 'MC 301E', '208-496-7565', 'cannonp@byui.edu', 1, 'Professor', 'm', 'paul-cannon'),
-    ('Paul', 'Cox', 'MC 301F', '208-496-7529', 'coxp@byui.edu', 1, 'Professor', 'm', 'paul-cox'),
-    ('Craig', 'Johnson', 'MC 301G', '208-496-7539', 'johnsonc@byui.edu', 1, 'Professor', 'm', 'craig-johnson'),
-    ('Chaz', 'Clark', 'MC 301H', '208-496-7535', 'clarkty@byui.edu', 1, 'Professor', 'm', 'chaz-clark'),
-    ('Robert', 'Colvin', 'LA 201A', '208-496-4308', 'colvinr@byui.edu', 3, 'Professor', 'm', 'robert-colvin'),
-    ('Scott', 'Galer', 'LA 201B', '208-496-4310', 'galers@byui.edu', 3, 'Professor', 'm', 'scott-galer'),
-    ('John', 'Ivers', 'LA 201C', '208-496-4313', 'iversj@byui.edu', 3, 'Professor', 'm', 'john-ivers'),
-    ('Jeremy', 'Lamoreaux', 'LA 201D', '208-496-4234', 'lamoreauxj@byui.edu', 3, 'Professor', 'm', 'jeremy-lamoreaux'),
-    ('Trever', 'McKay', 'LA 201E', '208-496-4312', 'mckaytr@byui.edu', 3, 'Department Chair', 'm', 'trever-mckay'),
-    ('Michael', 'Paul', 'LA 201F', '208-496-4315', 'paulm@byui.edu', 3, 'Professor', 'm', 'michael-paul');
+-- ---------------------------------------------------------------------------
+-- item_images  (one-to-many with a request)
+-- ---------------------------------------------------------------------------
+CREATE TABLE item_images (
+    id                  SERIAL PRIMARY KEY,
+    storage_request_id  INTEGER NOT NULL REFERENCES storage_requests(id) ON DELETE CASCADE,
+    file_name           VARCHAR(255) NOT NULL,
+    file_url            TEXT NOT NULL,
+    mime_type           VARCHAR(100),
+    caption             VARCHAR(255),
+    uploaded_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
 
--- Insert catalog entries
-INSERT INTO catalog (course_slug, faculty_slug, time, room) VALUES
-    ('cse-110', 'nathan-jack', 'Mon Wed Fri 8:00-8:50', 'STC 101'),
-    ('cse-111', 'nathan-jack', 'Mon Wed Fri 9:00-9:50', 'STC 102'),
-    ('cse-210', 'nathan-jack', 'Tue Thu 10:00-11:15', 'STC 103'),
-    ('cse-212', 'nathan-jack', 'Tue Thu 1:00-2:15', 'STC 104'),
-    ('cse-340', 'nathan-jack', 'Mon Wed 2:00-3:15', 'STC 105'),
-    ('cit-160', 'jason-allred', 'Mon Wed Fri 10:00-10:50', 'STC 106'),
-    ('cit-241', 'jason-allred', 'Tue Thu 8:00-9:15', 'STC 107'),
-    ('cit-260', 'jason-allred', 'Mon Wed 11:00-12:15', 'STC 108'),
-    ('cit-336', 'jason-allred', 'Fri 1:00-3:50', 'STC 109'),
-    ('wdd-130', 'adam-hayes', 'Mon Wed Fri 11:00-11:50', 'STC 201'),
-    ('wdd-230', 'adam-hayes', 'Tue Thu 11:00-12:15', 'STC 202'),
-    ('wdd-330', 'adam-hayes', 'Mon Wed 1:00-2:15', 'STC 203'),
-    ('wdd-430', 'adam-hayes', 'Tue Thu 2:30-3:45', 'STC 204'),
-    ('cse-310', 'adam-hayes', 'Fri 9:00-11:50', 'STC 205'),
-    ('cse-398', 'nate-phillips', 'Mon Wed 9:00-10:15', 'STC 206'),
-    ('cse-110', 'nate-phillips', 'Tue Thu 9:00-10:15', 'STC 207'),
-    ('cse-111', 'nate-phillips', 'Mon Wed Fri 1:00-1:50', 'STC 208'),
-    ('cse-212', 'nate-phillips', 'Tue Thu 3:00-4:15', 'STC 209'),
-    ('cse-210', 'william-clements', 'Mon Wed Fri 2:00-2:50', 'STC 301'),
-    ('cit-160', 'william-clements', 'Tue Thu 10:00-11:15', 'STC 302'),
-    ('cit-260', 'william-clements', 'Mon Wed 3:00-4:15', 'STC 303'),
-    ('cse-340', 'zachariah-alvey', 'Tue Thu 8:00-9:15', 'STC 304'),
-    ('cse-310', 'zachariah-alvey', 'Mon Wed Fri 8:00-8:50', 'STC 305'),
-    ('cse-212', 'zachariah-alvey', 'Tue Thu 1:00-2:15', 'STC 306'),
-    ('wdd-130', 'zachariah-alvey', 'Mon Wed 4:00-5:15', 'STC 307'),
-    ('cse-111', 'zachariah-alvey', 'Fri 10:00-12:50', 'STC 308'),
-    ('cse-110', 'bradley-armstrong', 'Mon Wed Fri 12:00-12:50', 'STC 309'),
-    ('cit-241', 'bradley-armstrong', 'Tue Thu 12:00-1:15', 'STC 310'),
-    ('wdd-230', 'bradley-armstrong', 'Mon Wed 5:00-6:15', 'STC 401'),
-    ('cse-210', 'bradley-armstrong', 'Fri 2:00-4:50', 'STC 402'),
-    ('wdd-330', 'lee-barney', 'Mon Wed Fri 3:00-3:50', 'STC 403'),
-    ('cse-340', 'lee-barney', 'Tue Thu 4:00-5:15', 'STC 404'),
-    ('cit-336', 'lee-barney', 'Mon Wed 6:00-7:15', 'STC 405'),
-    ('cse-398', 'lee-barney', 'Thu 6:00-8:50', 'STC 406'),
-    ('cit-260', 'rex-barzee', 'Mon Wed Fri 4:00-4:50', 'STC 407'),
-    ('wdd-430', 'rex-barzee', 'Tue Thu 5:00-6:15', 'STC 408'),
-    ('cse-212', 'rex-barzee', 'Mon Wed 7:00-8:15', 'STC 409'),
-    ('cse-310', 'rex-barzee', 'Fri 5:00-7:50', 'STC 410'),
-    ('cse-111', 'scott-burton', 'Mon Wed Fri 5:00-5:50', 'STC 411'),
-    ('wdd-130', 'scott-burton', 'Tue Thu 6:00-7:15', 'STC 412'),
-    ('cit-160', 'scott-burton', 'Mon Wed 8:00-9:15', 'STC 413'),
-    ('wdd-230', 'scott-burton', 'Thu 7:00-9:50', 'STC 414'),
-    ('cse-210', 'christopher-keers', 'Mon Wed Fri 6:00-6:50', 'STC 415'),
-    ('cit-241', 'christopher-keers', 'Tue Thu 7:00-8:15', 'STC 416'),
-    ('cse-340', 'christopher-keers', 'Mon Wed 9:00-10:15', 'STC 417'),
-    ('wdd-330', 'christopher-keers', 'Fri 6:00-8:50', 'STC 418'),
-    ('cse-110', 'julie-ann-anderson', 'Tue Thu 8:00-9:15', 'STC 419'),
-    ('wdd-130', 'julie-ann-anderson', 'Mon Wed Fri 7:00-7:50', 'STC 420'),
-    ('cit-160', 'julie-ann-anderson', 'Tue Thu 9:00-10:15', 'STC 421'),
-    ('wdd-230', 'julie-ann-anderson', 'Mon Wed 10:00-11:15', 'STC 422'),
-    ('cse-111', 'julie-ann-anderson', 'Fri 7:00-9:50', 'STC 423'),
-    ('eng-150', 'joelle-moen', 'Mon Wed Fri 8:00-8:50', 'GEB 101'),
-    ('eng-250', 'joelle-moen', 'Tue Thu 8:00-9:15', 'GEB 102'),
-    ('eng-216', 'joelle-moen', 'Mon Wed 9:00-10:15', 'GEB 103'),
-    ('eng-324', 'joelle-moen', 'Fri 9:00-11:50', 'GEB 104'),
-    ('eng-106', 'josh-allen', 'Mon Wed Fri 9:00-9:50', 'GEB 105'),
-    ('eng-150', 'josh-allen', 'Tue Thu 9:00-10:15', 'GEB 106'),
-    ('eng-295', 'josh-allen', 'Mon Wed 10:00-11:15', 'GEB 107'),
-    ('eng-381', 'josh-allen', 'Fri 10:00-12:50', 'GEB 108'),
-    ('eng-150', 'matt-babcock', 'Mon Wed Fri 10:00-10:50', 'GEB 201'),
-    ('eng-216', 'matt-babcock', 'Tue Thu 10:00-11:15', 'GEB 202'),
-    ('eng-250', 'matt-babcock', 'Mon Wed 11:00-12:15', 'GEB 203'),
-    ('eng-295', 'matt-babcock', 'Thu 1:00-3:50', 'GEB 204'),
-    ('eng-106', 'jeremy-bailey', 'Mon Wed Fri 11:00-11:50', 'GEB 301'),
-    ('eng-150', 'jeremy-bailey', 'Tue Thu 11:00-12:15', 'GEB 302'),
-    ('eng-324', 'jeremy-bailey', 'Mon Wed 12:00-1:15', 'GEB 303'),
-    ('eng-381', 'jeremy-bailey', 'Fri 11:00-1:50', 'GEB 304'),
-    ('eng-150', 'tom-ballard', 'Mon Wed Fri 12:00-12:50', 'GEB 305'),
-    ('eng-216', 'tom-ballard', 'Tue Thu 12:00-1:15', 'GEB 306'),
-    ('eng-250', 'tom-ballard', 'Mon Wed 1:00-2:15', 'GEB 307'),
-    ('eng-295', 'tom-ballard', 'Fri 12:00-2:50', 'GEB 308'),
-    ('math-112', 'elaine-wagner', 'Mon Wed Fri 8:00-8:50', 'MC 101'),
-    ('math-113', 'elaine-wagner', 'Tue Thu 8:00-9:15', 'MC 102'),
-    ('math-215', 'elaine-wagner', 'Mon Wed 9:00-10:15', 'MC 103'),
-    ('math-221', 'elaine-wagner', 'Fri 8:00-10:50', 'MC 104'),
-    ('math-108x', 'brett-amidan', 'Mon Wed Fri 9:00-9:50', 'MC 105'),
-    ('math-112', 'brett-amidan', 'Tue Thu 9:00-10:15', 'MC 106'),
-    ('math-280', 'brett-amidan', 'Mon Wed 10:00-11:15', 'MC 107'),
-    ('math-341', 'brett-amidan', 'Fri 9:00-11:50', 'MC 108'),
-    ('intl-201', 'robert-colvin', 'Mon Wed Fri 10:00-10:50', 'LA 101'),
-    ('intl-301', 'robert-colvin', 'Tue Thu 10:00-11:15', 'LA 102'),
-    ('intl-350', 'robert-colvin', 'Mon Wed 11:00-12:15', 'LA 103'),
-    ('intl-401', 'scott-galer', 'Mon Wed Fri 11:00-11:50', 'LA 201'),
-    ('intl-201', 'scott-galer', 'Tue Thu 11:00-12:15', 'LA 202'),
-    ('intl-350', 'scott-galer', 'Mon Wed 12:00-1:15', 'LA 203'),
-    ('intl-301', 'scott-galer', 'Fri 11:00-1:50', 'LA 204'),
-    ('intl-201', 'john-ivers', 'Mon Wed Fri 1:00-1:50', 'LA 301'),
-    ('intl-301', 'john-ivers', 'Tue Thu 1:00-2:15', 'LA 302'),
-    ('intl-401', 'john-ivers', 'Mon Wed 2:00-3:15', 'LA 303');
+-- ===========================================================================
+-- SEED DATA
+-- ===========================================================================
+-- NOTE: every password below is the SAME bcrypt hash of the string  P@$$w0rd!
+-- Replace the placeholder $2b$10$pjww4PPzj/kQ0BOUv.jp9eyOQZRaN8PEORCAfko1cidrc4nX/AALy with a real hash you generate
+-- locally (see the note that came with this file). All five accounts share
+-- the password  P@$$w0rd!  so each role is easy to test.
+
+-- One account per role (owner, staff, customer) + extra customers for data
+INSERT INTO users (name, email, password, role) VALUES
+    ('Avery Blake',  'owner@deadweight.example',    '$2b$10$pjww4PPzj/kQ0BOUv.jp9eyOQZRaN8PEORCAfko1cidrc4nX/AALy', 'owner'),
+    ('Jules Morgan', 'staff@deadweight.example',    '$2b$10$pjww4PPzj/kQ0BOUv.jp9eyOQZRaN8PEORCAfko1cidrc4nX/AALy', 'staff'),
+    ('Morgan Lee',   'customer@deadweight.example', '$2b$10$pjww4PPzj/kQ0BOUv.jp9eyOQZRaN8PEORCAfko1cidrc4nX/AALy', 'customer'),
+    ('Taylor Brooks','taylor.brooks@deadweight.example', '$2b$10$pjww4PPzj/kQ0BOUv.jp9eyOQZRaN8PEORCAfko1cidrc4nX/AALy', 'customer'),
+    ('Sam Rivera',   'sam.rivera@deadweight.example',    '$2b$10$pjww4PPzj/kQ0BOUv.jp9eyOQZRaN8PEORCAfko1cidrc4nX/AALy', 'customer');
+
+-- Storage requests (statuses drawn from the request_status enum)
+INSERT INTO storage_requests
+    (user_id, item_name, item_description, requested_volume, pickup_date, return_date, current_status, notes) VALUES
+    (3, 'Winter Clothing',      'Two large bins of winter coats, boots, and linens.',        4.50, '2026-05-05', '2026-08-20', 'awaiting_pickup', 'Pre-summer move-out storage.'),
+    (3, 'Dorm Furniture',       'Desk lamp, futon frame, and a folding chair.',              6.00, '2026-05-06', '2026-08-22', 'requested',       'Awaiting staff approval.'),
+    (4, 'Textbooks & Supplies', 'Three boxes of textbooks and school supplies.',             2.25, '2026-05-01', '2026-08-18', 'in_storage',      'Stored for the summer.'),
+    (5, 'Mini Fridge',          'Compact dorm refrigerator, cleaned and defrosted.',         1.80, '2026-05-03', '2026-08-19', 'returned',        'Returned at semester start.');
+
+-- Status history: each request's full timeline
+INSERT INTO status_history (storage_request_id, status, changed_by, note, changed_at) VALUES
+    (1, 'requested',       3, 'Request created by customer',     '2026-04-20 09:12:00'),
+    (1, 'approved',        2, 'Staff approved the request',      '2026-04-21 14:30:00'),
+    (1, 'awaiting_pickup', 2, 'Bins dropped off, ready for pickup', '2026-04-23 08:00:00'),
+    (2, 'requested',       3, 'Request created by customer',     '2026-04-22 10:45:00'),
+    (3, 'requested',       4, 'Request created by customer',     '2026-04-15 12:00:00'),
+    (3, 'approved',        2, 'Staff approved the request',      '2026-04-16 09:45:00'),
+    (3, 'awaiting_pickup', 2, 'Ready for collection',            '2026-04-18 08:30:00'),
+    (3, 'in_storage',      2, 'Items received into storage',     '2026-04-20 16:20:00'),
+    (4, 'requested',       5, 'Request created by customer',     '2026-04-10 11:00:00'),
+    (4, 'approved',        2, 'Staff approved the request',      '2026-04-11 10:15:00'),
+    (4, 'in_storage',      2, 'Items received into storage',     '2026-04-14 13:00:00'),
+    (4, 'out_for_return',  2, 'Out for return delivery',         '2026-08-18 09:00:00'),
+    (4, 'returned',        2, 'Returned to customer',            '2026-08-19 15:30:00');
+
+-- Reviews
+INSERT INTO reviews (user_id, storage_request_id, rating, comment) VALUES
+    (3, 1, 5, 'The pickup team was prompt and handled everything carefully.'),
+    (4, 3, 4, 'Great service; I would love more updates while items are in storage.'),
+    (5, 4, 5, 'Returned exactly on time and in perfect condition. Stress gone.');
+
+-- Contact messages (status uses the received/replied/closed check)
+INSERT INTO contact_messages (user_id, name, email, subject, message, status) VALUES
+    (3,    'Morgan Lee',   'customer@deadweight.example', 'Pickup scheduling question', 'Can I move my pickup to May 6th instead of May 5th?', 'received'),
+    (NULL, 'Jamie Parker', 'jamie.parker@example.com',    'Partnership inquiry',         'I run a local moving company interested in partnering for move-out season.', 'received'),
+    (4,    'Taylor Brooks','taylor.brooks@deadweight.example', 'Labeling question',      'Should I label each box by room before pickup?', 'replied');
+
+-- Item images (one-to-many with requests)
+INSERT INTO item_images (storage_request_id, file_name, file_url, mime_type, caption) VALUES
+    (1, 'winter_clothing_1.jpg', 'https://example.com/uploads/winter_clothing_1.jpg', 'image/jpeg', 'Bin 1 of winter clothing'),
+    (1, 'winter_clothing_2.jpg', 'https://example.com/uploads/winter_clothing_2.jpg', 'image/jpeg', 'Bin 2 of winter clothing'),
+    (3, 'textbooks_box_1.jpg',   'https://example.com/uploads/textbooks_box_1.jpg',   'image/jpeg', 'Boxed textbooks'),
+    (4, 'mini_fridge.jpg',       'https://example.com/uploads/mini_fridge.jpg',       'image/jpeg', 'Cleaned mini fridge before storage');
 
 COMMIT;
