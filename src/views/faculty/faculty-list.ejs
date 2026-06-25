@@ -1,0 +1,40 @@
+<%- include('../partials/header') %>
+<main>
+    <h1>Faculty Directory</h1>
+    <p>Browse our faculty members and click on any name to view their contact information and details.</p>
+
+    <div class="sections">
+        <div class="sections-intro">
+            <h3 style="text-decoration: underline;">Sorting</h3>
+            <% if (currentSort === 'department' || currentSort === 'title' || currentSort === 'name') { %>
+                <div class="sort-message">
+                    <p>Currently sorted by: <strong><%= currentSort %></strong></p>
+                </div>
+            <% } else { %>
+                <div class="sort-message">
+                    <p>No sorting applied, using default sorting by department.</p>
+                </div>
+            <% } %>
+
+            <div class="sections-header">
+                <div class="sort-options">
+                    <span>Sort by: </span>
+                    <a href="/faculty?sort=name" class="<%= currentSort === 'name' ? 'active' : '' %>">Name</a>
+                    <a href="/faculty?sort=department" class="<%= currentSort === 'department' ? 'active' : '' %>">Department</a>
+                    <a href="/faculty?sort=title" class="<%= currentSort === 'title' ? 'active' : '' %>">Title</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="faculty-list">
+        <% faculty.forEach(member => { %>
+            <div class="faculty-card">
+                <h3><a href="/faculty/<%= member.slug %>"><%= member.name %></a></h3>
+                <p class="faculty-title"><%= member.title %></p>
+                <p class="faculty-department"><%= member.department %> Department</p>
+            </div>
+        <% }); %>
+    </div>
+</main>
+<%- include('../partials/footer') %>

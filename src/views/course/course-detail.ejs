@@ -1,0 +1,57 @@
+<%- include('../partials/header') %>
+<main>
+    <div class="course-header">
+        <h1><%= course.name %></h1>
+        <p class="course-meta"><%= course.courseCode %> • <%= course.creditHours %> credit hours</p>
+        <p class="course-description"><%= course.description %></p>
+    </div>
+
+    <div class="sections">
+        <div class="sections-intro">
+            <h3 style="text-decoration: underline;">Sorting</h3>
+            <% if (currentSort === 'professor' || currentSort === 'room' || currentSort === 'time') { %>
+                <div class="sort-message">
+                    <p>Currently sorted by: <strong><%= currentSort %></strong></p>
+                </div>
+            <% } else { %>
+                <div class="sort-message">
+                    <p>No sorting applied, using default sorting by time.</p>
+                </div>
+            <% } %>
+
+            <div class="sections-header">
+                <p>Available Sections</p>
+                <div class="sort-options">
+                    <span>Sort by: </span>
+                    <a href="/course/<%= course.slug %>?sort=time" class="<%= currentSort === 'time' ? 'active' : '' %>">Time</a>
+                    <a href="/course/<%= course.slug %>?sort=professor" class="<%= currentSort === 'professor' ? 'active' : '' %>">Professor</a>
+                    <a href="/course/<%= course.slug %>?sort=room" class="<%= currentSort === 'room' ? 'active' : '' %>">Room</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="section-list">
+            <% if (sections && sections.length > 0) { %>
+                <% sections.forEach(section => { %>
+                    <div class="section-card">
+                        <div class="section-time">⏰ <%= section.time %></div>
+                        <div class="section-room">📍 Room: <%= section.room %></div>
+                        <div class="section-professor">
+                            👤 Instructor: <strong><%= section.professor %></strong>
+                        </div>
+                        <p class="bio-link">
+                            <a href="/faculty/<%= section.professorSlug %>">View Professor Biography &rarr;</a>
+                        </p>
+                    </div>
+                <% }); %>
+            <% } else { %>
+                <p class="no-sections">No sections available for this semester.</p>
+            <% } %>
+        </div>
+    </div>
+
+    <div class="navigation">
+        <p><a href="/course">&larr; Back to Course course</a></p>
+    </div>
+</main>
+<%- include('../partials/footer') %>

@@ -1,0 +1,15 @@
+<%- include('../partials/header') %>
+<main>
+    <h1>Courses</h1>
+    <p class="description">Browse our available courses and click on any course to see detailed information including available sections and instructors.</p>
+
+    <div class="course-list">
+        <% courses.forEach(course => { %>  <div class="course-card">
+                <h3><a href="/course/<%= course.slug %>"><%= course.name %></a></h3>
+                <p class="course-courseCode"><%= course.courseCode %> • <%= course.creditHours %> credit hours</p>
+                <p class="course-description"><%= course.description %></p>
+            </div>
+        <% }); %>
+    </div>
+</main>
+<%- include('../partials/footer') %>

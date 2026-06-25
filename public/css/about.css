@@ -1,0 +1,62 @@
+.about-layout {
+    display: flex;
+    align-items: stretch;
+    gap: 32px;
+    background: var(--surface);
+    border-radius: 8px;
+    padding: 32px;
+    border: 1px solid var(--border);
+    max-width: 800px;
+    margin: 0 auto;
+
+    &:hover {
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            background: #f9f9f9;
+        }
+}
+
+.about-image {
+    flex: 0 0 320px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    .profile-image {
+        width: 100%;
+        max-width: 320px;
+        aspect-ratio: 1 / 1;
+        object-fit: cover;
+        object-position: center 35%;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+    }
+}
+
+.about-content {
+    flex: 1;
+
+
+    .hobbies {
+        ul {
+            margin: 0;
+            padding-left: 20px;
+            align-content: center;
+
+            li {
+                margin-bottom: 10px;
+                color: var(--text);
+            }
+        }
+    }
+}
+
+@media (max-width: 768px) {
+    .about-layout {
+        flex-direction: column;
+        padding: 20px;
+    }
+
+    .about-image {
+        flex-basis: auto;
+    }
+}

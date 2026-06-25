@@ -1,0 +1,1 @@
+You will need to download the public SSL key (CA) file from https://byuicse.io/dashboard/db/postgresql and add it to this directory. You may delete this README once its in place. 
