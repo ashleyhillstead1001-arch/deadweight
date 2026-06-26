@@ -1,5 +1,6 @@
 import { body, validationResult } from 'express-validator';
 import { findUserByEmail, verifyPassword } from '../../models/forms/login.js';
+import { getRequestsByUser } from '../../models/requests/requests.js';
 import { Router } from 'express';
 
 const router = Router();
@@ -119,25 +120,27 @@ const processLogout = (req, res) => {
 /**
  * Display protected dashboard (requires login).
  */
-const showDashboard = (req, res) => {
+const showDashboard = async (req, res, next) => {
     const user = req.session.user;
-    const sessionData = req.session;
 
-    // Security check! Ensure user and sessionData do not contain password field
+    // Security check! Ensure the session user object never carries a password.
     if (user && user.password) {
         console.error('Security error: password found in user object');
         delete user.password;
     }
-    if (sessionData.user && sessionData.user.password) {
-        console.error('Security error: password found in sessionData.user');
-        delete sessionData.user.password;
-    }
 
-    res.render('dashboard', {
-        title: 'Dashboard',
-        user,
-        sessionData
-    });
+    try {
+        const requests = await getRequestsByUser(user.id);
+        const active = requests.filter(r => r.current_status !== 'returned');
+        res.render('dashboard', {
+            title: 'Dashboard',
+            user,
+            requests,
+            activeCount: active.length
+        });
+    } catch (err) {
+        next(err);
+    }
 };
 
 // Routes

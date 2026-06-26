@@ -1,10 +1,44 @@
 <%- include('partials/header') %>
 <main>
-    <h2><%- greeting %></h2>
-    <h1><%= title %></h1>
-    <p class="description">Welcome to my Express application! This site demonstrates the power of templating engines.</p>
-    <div class="hero-image">
-        <img src="https://picsum.photos/600/400" alt="Random image">
+    <section class="hero">
+        <h1>Student storage, handled end to end.</h1>
+        <p>We pick up from your dorm, store your belongings safely through the summer, and bring them back when the new semester starts.</p>
+        <div class="hero-actions">
+            <a href="/requests/new" class="btn btn-primary">Request storage</a>
+            <a href="/how-it-works" class="btn btn-secondary">How it works</a>
+        </div>
+    </section>
+
+    <h2>Why students use Deadweight</h2>
+    <div class="feature-grid">
+        <div class="feature">
+            <span class="icon" aria-hidden="true">&#128666;</span>
+            <h3>Doorstep pickup</h3>
+            <p>Schedule a pickup date and we collect your bins and furniture straight from your room.</p>
+        </div>
+        <div class="feature">
+            <span class="icon" aria-hidden="true">&#128274;</span>
+            <h3>Secure storage</h3>
+            <p>Your items are logged, photographed, and kept in a monitored facility all summer long.</p>
+        </div>
+        <div class="feature">
+            <span class="icon" aria-hidden="true">&#128230;</span>
+            <h3>Return on your schedule</h3>
+            <p>Pick a return date and everything is delivered back, right when you need it for move-in.</p>
+        </div>
+        <div class="feature">
+            <span class="icon" aria-hidden="true">&#128241;</span>
+            <h3>Track every stage</h3>
+            <p>Follow each request from requested to returned, with a full status timeline you can check anytime.</p>
+        </div>
     </div>
+
+    <section class="hero" style="margin-top:2.5rem;">
+        <h2 style="color:#fff;">Moving out soon?</h2>
+        <p>Start a storage request in a couple of minutes. No account needed to browse how it works.</p>
+        <div class="hero-actions">
+            <a href="/requests/new" class="btn btn-primary">Get started</a>
+        </div>
+    </section>
 </main>
 <%- include('partials/footer') %>

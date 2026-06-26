@@ -45,6 +45,12 @@ if (process.env.NODE_ENV?.includes('dev') && process.env.ENABLE_SQL_LOGGING === 
             }
         },
 
+        // Expose pooled clients so transaction code (BEGIN/COMMIT) works the
+        // same way whether or not query logging is enabled.
+        connect() {
+            return pool.connect();
+        },
+
         async close() {
             await pool.end();
         }

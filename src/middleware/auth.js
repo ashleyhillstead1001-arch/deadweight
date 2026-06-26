@@ -30,7 +30,7 @@ const setAuthLocals = (res, user) => {
     res.locals.currentUser = user || null;
     res.locals.userRole = user ? user.role : null;
     res.locals.isAdmin = Boolean(user) && user.role === ROLES.ADMIN;
-    res.locals.isEmployee = Boolean(user) && user.role === ROLES.EMPLOYEE;
+    res.locals.isEmployee = Boolean(user) && (user.role === ROLES.EMPLOYEE || user.role === ROLES.ADMIN);
     res.locals.isStandard = Boolean(user) && user.role === ROLES.STANDARD;
 };
 

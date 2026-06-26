@@ -1,39 +1,58 @@
 <%- include('partials/header') %>
 <main>
-    <div class="dashboard">
-        <h1>Welcome to Your Dashboard</h1>
-        <p>
-            This is a protected page that requires authentication. Only logged-in users can access this content.
-        </p>
-
-        <div class="user-info">
-            <h2>Your Account Information</h2>
-            <div class="user-detail">
-                <span class="label">Name:</span>
-                <span class="value"><%= user.name %></span>
-            </div>
-            <div class="user-detail">
-                <span class="label">Email:</span>
-                <span class="value"><%= user.email %></span>
-            </div>
-            <div class="user-detail">
-                <span class="label">Member since:</span>
-                <span class="value"><%= new Date(user.created_at).toLocaleDateString() %></span>
-            </div>
+    <p class="muted" style="margin:0 0 0.25rem;"><%= greeting %></p>
+    <div class="section-head">
+        <div>
+            <h1 style="margin-bottom:0.25rem;">Welcome back, <%= user.name.split(' ')[0] %></h1>
+            <p class="muted" style="margin:0;text-transform:capitalize;"><%= user.role %> account</p>
         </div>
+        <a href="/requests/new" class="btn btn-primary">New request</a>
+    </div>
 
-        <div class="session-debug">
-            <h3>Session Information (For Learning Purposes)</h3>
-            <p><em>This section shows your current session data for educational purposes.</em></p>
-            <pre><%= JSON.stringify(sessionData, null, 2) %></pre>
-            <p>
-                <strong>If you see a password property in the above object you have a security vulnerability, fix it!</strong>
-            </p>
+    <div class="feature-grid" style="margin-top:1.5rem;">
+        <div class="feature">
+            <h3 style="font-size:1.8rem;margin:0;"><%= requests.length %></h3>
+            <p>Total requests</p>
         </div>
-
-        <div class="dashboard-actions">
-            <a href="/logout" class="logout-button">Logout</a>
+        <div class="feature">
+            <h3 style="font-size:1.8rem;margin:0;"><%= activeCount %></h3>
+            <p>Active (not yet returned)</p>
+        </div>
+        <div class="feature">
+            <h3 style="font-size:1.1rem;margin:0;"><%= new Date(user.created_at).toLocaleDateString('en-US', { dateStyle: 'medium' }) %></h3>
+            <p>Member since</p>
         </div>
     </div>
+
+    <div class="section-head" style="margin-top:2.5rem;">
+        <h2 style="margin:0;">Your recent requests</h2>
+        <a href="/requests">View all</a>
+    </div>
+
+    <% if (requests && requests.length > 0) { %>
+        <div class="card-grid">
+            <% requests.slice(0, 6).forEach(r => { %>
+                <article class="request-card">
+                    <div class="rc-head">
+                        <div>
+                            <h3><a href="/requests/<%= r.id %>"><%= r.item_name %></a></h3>
+                            <p class="rc-meta"><%= Number(r.requested_volume) %> ft&sup3;</p>
+                        </div>
+                        <span class="status status-<%= r.current_status %>"><%= r.current_status.replace(/_/g, ' ') %></span>
+                    </div>
+                    <div class="rc-foot">
+                        <span>Pickup <%= r.pickup_date ? new Date(r.pickup_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'TBD' %></span>
+                        <span>Return <%= r.return_date ? new Date(r.return_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'TBD' %></span>
+                    </div>
+                </article>
+            <% }); %>
+        </div>
+    <% } else { %>
+        <div class="empty">
+            <span class="icon" aria-hidden="true">&#128230;</span>
+            <p>You haven't made any storage requests yet.</p>
+            <a href="/requests/new" class="btn btn-secondary">Create your first request</a>
+        </div>
+    <% } %>
 </main>
 <%- include('partials/footer') %>

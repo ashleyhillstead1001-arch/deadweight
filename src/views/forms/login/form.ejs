@@ -1,26 +1,19 @@
 <%- include('../../partials/header') %>
 <main>
-    <h1><%= title %></h1>
-    <p>
-        Enter your email and password to access your account. Do not have an account? <a href="/register">Register here</a>.
-    </p>
+    <h1>Sign in</h1>
+    <p class="description">Access your dashboard and storage requests. New here? <a href="/register">Create an account</a>.</p>
 
-    <form method="POST" action="/login" class="login-form">
-        <div class="form-group">
-            <label for="email">Email Address</label>
-            <input type="email" id="email" name="email" required placeholder="you@example.com">
+    <form method="POST" action="/login" class="form-card">
+        <div class="field">
+            <label for="email">Email address</label>
+            <input type="email" id="email" name="email" placeholder="you@example.com" required>
         </div>
-
-        <div class="form-group">
+        <div class="field">
             <label for="password">Password</label>
-            <input type="password" id="password" name="password" minlength="8" required placeholder="••••••••">
+            <input type="password" id="password" name="password" minlength="8" placeholder="Your password" required>
         </div>
-
-        <button type="submit">Sign In</button>
-
-        <div class="form-footer">
-            <p>New user? <a href="/register">Create an account</a></p>
-        </div>
+        <button type="submit" class="btn btn-primary btn-block">Sign in</button>
+        <p class="muted" style="text-align:center;margin:1rem 0 0;font-size:0.9rem;">New user? <a href="/register">Create an account</a></p>
     </form>
 </main>
 <%- include('../../partials/footer') %>

@@ -1,19 +1,26 @@
 <%- include('../../partials/header') %>
 <main>
-    <h1>Contact Form Submissions</h1>
+    <h1>Contact messages</h1>
+    <p class="description">Messages submitted through the contact form, newest first.</p>
 
-    <% if (contactForms && contactForms.length > 0) { %>
-        <div class="contact-responses">
-            <% contactForms.forEach(form => { %>
-                <div class="response-item">
-                    <h3 class="response-subject"><%= form.subject %></h3>
-                    <p class="response-message"><%= form.message %></p>
-                    <p class="response-date">Submitted: <%= new Date(form.submitted).toLocaleDateString() %></p>
+    <% if (messages && messages.length > 0) { %>
+        <% messages.forEach(m => { %>
+            <div class="panel" style="margin-bottom:1rem;">
+                <div class="section-head" style="margin-bottom:0.5rem;">
+                    <h3 style="margin:0;"><%= m.subject %></h3>
+                    <span class="status status-<%= m.status === 'received' ? 'requested' : (m.status === 'replied' ? 'in_storage' : 'returned') %>"><%= m.status %></span>
                 </div>
-            <% }); %>
-        </div>
+                <p class="muted" style="margin:0 0 0.5rem;font-size:0.88rem;">
+                    <%= m.name %> &lt;<%= m.email %>&gt; &middot; <%= new Date(m.received_at).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }) %>
+                </p>
+                <p style="margin:0;"><%= m.message %></p>
+            </div>
+        <% }); %>
     <% } else { %>
-        <p class="no-responses">No contact form submissions yet.</p>
+        <div class="empty">
+            <span class="icon" aria-hidden="true">&#9993;</span>
+            <p>No messages yet.</p>
+        </div>
     <% } %>
 </main>
 <%- include('../../partials/footer') %>

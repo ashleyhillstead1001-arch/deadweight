@@ -1,30 +1,28 @@
 <%- include('../../partials/header') %>
 <main>
-    <h1><%= title %></h1>
+    <h1>Registered users</h1>
+    <p class="description">All accounts on the service, newest first.</p>
 
     <% if (users && users.length > 0) { %>
-        <div class="users-list">
-            <% users.forEach(user => { %>
-                <div class="user-card">
-                    <div class="user-header">
-                        <h3><%= user.name %></h3>
-                        <span class="user-id">ID: <%= user.id %></span>
-                    </div>
-                    <div class="user-details">
-                        <div class="detail-item">
-                            <div class="label">Email</div>
-                            <div class="value"><%= user.email %></div>
-                        </div>
-                        <div class="detail-item">
-                            <div class="label">Registered</div>
-                            <div class="value"><%= new Date(user.created_at).toLocaleDateString() %></div>
-                        </div>
-                    </div>
-                </div>
-            <% }); %>
+        <div class="panel" style="padding:0.5rem 1rem;">
+            <table class="table">
+                <thead>
+                    <tr><th>Name</th><th>Email</th><th>Role</th><th>Registered</th></tr>
+                </thead>
+                <tbody>
+                    <% users.forEach(user => { %>
+                        <tr>
+                            <td><%= user.name %></td>
+                            <td><%= user.email %></td>
+                            <td style="text-transform:capitalize;"><%= user.role %></td>
+                            <td><%= new Date(user.created_at).toLocaleDateString('en-US', { dateStyle: 'medium' }) %></td>
+                        </tr>
+                    <% }); %>
+                </tbody>
+            </table>
         </div>
     <% } else { %>
-        <p class="no-users">No users registered yet.</p>
+        <div class="empty"><p>No users registered yet.</p></div>
     <% } %>
 </main>
 <%- include('../../partials/footer') %>

@@ -1,3 +1,0 @@
--- Practice database tables for Deadweight
--- This file is intentionally left blank because the primary Deadweight schema
--- and seed data are defined in seed.sql.

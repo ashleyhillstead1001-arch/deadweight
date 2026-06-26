@@ -1,0 +1,42 @@
+<%- include('../partials/header') %>
+<main>
+    <div class="section-head">
+        <div>
+            <h1><%= heading %></h1>
+            <p class="description"><%= intro %></p>
+        </div>
+        <a href="/requests/new" class="btn btn-primary">New request</a>
+    </div>
+
+    <% if (!requests || requests.length === 0) { %>
+        <div class="empty">
+            <span class="icon" aria-hidden="true">&#128230;</span>
+            <p>No storage requests yet.</p>
+            <a href="/requests/new" class="btn btn-secondary">Start your first request</a>
+        </div>
+    <% } else { %>
+        <div class="card-grid">
+            <% requests.forEach(r => { %>
+                <article class="request-card">
+                    <div class="rc-head">
+                        <div>
+                            <h3><a href="/requests/<%= r.id %>"><%= r.item_name %></a></h3>
+                            <p class="rc-meta">
+                                <%= Number(r.requested_volume) %> ft&sup3;<% if (showOwner && r.owner_name) { %> &middot; <%= r.owner_name %><% } %>
+                            </p>
+                        </div>
+                        <span class="status status-<%= r.current_status %>"><%= r.current_status.replace(/_/g, ' ') %></span>
+                    </div>
+                    <% if (r.item_description) { %>
+                        <p class="muted" style="font-size:0.92rem;margin:0;"><%= r.item_description %></p>
+                    <% } %>
+                    <div class="rc-foot">
+                        <span>Pickup <%= r.pickup_date ? new Date(r.pickup_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'TBD' %></span>
+                        <span>Return <%= r.return_date ? new Date(r.return_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'TBD' %></span>
+                    </div>
+                </article>
+            <% }); %>
+        </div>
+    <% } %>
+</main>
+<%- include('../partials/footer') %>

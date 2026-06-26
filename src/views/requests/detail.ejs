@@ -1,0 +1,116 @@
+<%- include('../partials/header') %>
+<main>
+    <p style="margin:0 0 0.75rem;"><a href="/requests">&larr; Back to requests</a></p>
+
+    <div class="section-head">
+        <div>
+            <h1 style="margin-bottom:0.35rem;"><%= request.item_name %></h1>
+            <p class="muted" style="margin:0;"><%= Number(request.requested_volume) %> ft&sup3; &middot; requested by <%= request.owner_name %></p>
+        </div>
+        <span class="status status-<%= request.current_status %>" style="font-size:0.85rem;"><%= request.current_status.replace(/_/g, ' ') %></span>
+    </div>
+
+    <%
+        const labels = {
+            requested: 'Requested',
+            approved: 'Approved',
+            awaiting_pickup: 'Awaiting pickup',
+            in_storage: 'In storage',
+            out_for_return: 'Out for return',
+            returned: 'Returned'
+        };
+    %>
+    <div class="stepper" aria-hidden="true">
+        <% statuses.forEach((s, i) => { %>
+            <span class="node <%= i < currentIndex ? 'done' : (i === currentIndex ? 'active' : '') %>"><% if (i < currentIndex) { %>&check;<% } %></span>
+            <% if (i < statuses.length - 1) { %>
+                <span class="seg <%= i < currentIndex ? 'done' : '' %>"></span>
+            <% } %>
+        <% }); %>
+    </div>
+    <div class="stepper-labels">
+        <% statuses.forEach(s => { %><span><%= labels[s] %></span><% }); %>
+    </div>
+
+    <div class="detail-grid" style="margin-top:2rem;">
+        <div>
+            <% if (request.item_description) { %>
+                <div class="panel">
+                    <h2>Description</h2>
+                    <p style="margin:0;"><%= request.item_description %></p>
+                </div>
+            <% } %>
+
+            <div class="panel">
+                <h2>Photos</h2>
+                <% if (images && images.length > 0) { %>
+                    <div class="gallery">
+                        <% images.forEach(img => { %>
+                            <figure>
+                                <img src="<%= img.file_url %>" alt="<%= img.caption || img.file_name %>" loading="lazy">
+                                <% if (img.caption) { %><figcaption><%= img.caption %></figcaption><% } %>
+                            </figure>
+                        <% }); %>
+                    </div>
+                <% } else { %>
+                    <p class="muted" style="margin:0;">No photos have been added to this request yet.</p>
+                <% } %>
+            </div>
+
+            <div class="panel">
+                <h2>Status timeline</h2>
+                <% if (history && history.length > 0) { %>
+                    <ul class="timeline">
+                        <% history.forEach(h => { %>
+                            <li>
+                                <div class="tl-status"><%= h.status.replace(/_/g, ' ') %></div>
+                                <div class="tl-meta">
+                                    <%= new Date(h.changed_at).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }) %><% if (h.changed_by_name) { %> &middot; <%= h.changed_by_name %><% } %>
+                                </div>
+                                <% if (h.note) { %><div class="tl-note"><%= h.note %></div><% } %>
+                            </li>
+                        <% }); %>
+                    </ul>
+                <% } else { %>
+                    <p class="muted" style="margin:0;">No status changes recorded yet.</p>
+                <% } %>
+            </div>
+
+            <div class="panel">
+                <h2>Reviews</h2>
+                <% if (reviews && reviews.length > 0) { %>
+                    <% reviews.forEach(rv => { %>
+                        <div class="review">
+                            <div class="stars" aria-label="<%= rv.rating %> out of 5 stars"><% for (let i = 0; i < 5; i++) { %><%= i < rv.rating ? '\u2605' : '\u2606' %><% } %></div>
+                            <% if (rv.comment) { %><p style="margin:0.3rem 0;"><%= rv.comment %></p><% } %>
+                            <p class="by" style="margin:0;">&mdash; <%= rv.reviewer_name %>, <%= new Date(rv.created_at).toLocaleDateString('en-US', { dateStyle: 'medium' }) %></p>
+                        </div>
+                    <% }); %>
+                <% } else { %>
+                    <p class="muted" style="margin:0;">No reviews yet.</p>
+                <% } %>
+            </div>
+        </div>
+
+        <aside>
+            <div class="panel">
+                <h2>Details</h2>
+                <dl class="kv">
+                    <dt>Status</dt><dd><span class="status status-<%= request.current_status %>"><%= request.current_status.replace(/_/g, ' ') %></span></dd>
+                    <dt>Volume</dt><dd><%= Number(request.requested_volume) %> ft&sup3;</dd>
+                    <dt>Pickup</dt><dd><%= request.pickup_date ? new Date(request.pickup_date).toLocaleDateString('en-US', { dateStyle: 'medium' }) : 'To be scheduled' %></dd>
+                    <dt>Return</dt><dd><%= request.return_date ? new Date(request.return_date).toLocaleDateString('en-US', { dateStyle: 'medium' }) : 'To be scheduled' %></dd>
+                    <dt>Owner</dt><dd><%= request.owner_name %></dd>
+                    <% if (typeof isEmployee !== 'undefined' && isEmployee) { %>
+                        <dt>Email</dt><dd><%= request.owner_email %></dd>
+                    <% } %>
+                    <dt>Created</dt><dd><%= new Date(request.created_at).toLocaleDateString('en-US', { dateStyle: 'medium' }) %></dd>
+                </dl>
+                <% if (request.notes) { %>
+                    <p class="muted" style="margin-top:1rem;font-size:0.9rem;"><strong>Notes:</strong> <%= request.notes %></p>
+                <% } %>
+            </div>
+        </aside>
+    </div>
+</main>
+<%- include('../partials/footer') %>

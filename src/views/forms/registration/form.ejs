@@ -1,37 +1,34 @@
 <%- include('../../partials/header') %>
 <main>
-    <h1><%= title %></h1>
-    <p>
-        Register for a new account by providing your information below. All fields are required and passwords must meet security requirements.
-    </p>
-    <form method="POST" action="/register" class="registration-form">
-        <div class="form-group">
-            <label for="name">Full Name</label>
-            <input type="text" id="name" name="name" minlength="2" required placeholder="John Doe">
-        </div>
+    <h1>Create your account</h1>
+    <p class="description">Sign up to request storage and track your items. All fields are required.</p>
 
-        <div class="form-group">
-            <label for="email">Email Address</label>
-            <input type="email" id="email" name="email" required placeholder="you@example.com">
+    <form method="POST" action="/register" class="form-card">
+        <div class="field">
+            <label for="name">Full name</label>
+            <input type="text" id="name" name="name" minlength="2" placeholder="Jordan Avery" required>
         </div>
-
-        <div class="form-group">
-            <label for="emailConfirm">Confirm Email Address</label>
-            <input type="email" id="emailConfirm" name="emailConfirm" required placeholder="you@example.com">
+        <div class="field-row">
+            <div class="field">
+                <label for="email">Email address</label>
+                <input type="email" id="email" name="email" placeholder="you@example.com" required>
+            </div>
+            <div class="field">
+                <label for="emailConfirm">Confirm email</label>
+                <input type="email" id="emailConfirm" name="emailConfirm" placeholder="you@example.com" required>
+            </div>
         </div>
-
-        <div class="form-group">
+        <div class="field">
             <label for="password">Password</label>
-            <input type="password" id="password" name="password" minlength="8" pattern="(?=.*[0-9])(?=.*[!@#$%^&*]).*" required placeholder="••••••••">
-            <div class="help-text">Must be at least 8 characters with a number and special character.</div>
+            <input type="password" id="password" name="password" minlength="8" pattern="(?=.*[0-9])(?=.*[!@#$%^&*]).*" placeholder="At least 8 characters" required>
+            <p class="hint">Must be at least 8 characters with a number and a special character.</p>
         </div>
-
-        <div class="form-group">
-            <label for="passwordConfirm">Confirm Password</label>
-            <input type="password" id="passwordConfirm" name="passwordConfirm" required placeholder="••••••••">
+        <div class="field">
+            <label for="passwordConfirm">Confirm password</label>
+            <input type="password" id="passwordConfirm" name="passwordConfirm" placeholder="Re-enter your password" required>
         </div>
-
-        <button type="submit">Create Account</button>
+        <button type="submit" class="btn btn-primary btn-block">Create account</button>
+        <p class="muted" style="text-align:center;margin:1rem 0 0;font-size:0.9rem;">Already have an account? <a href="/login">Sign in</a></p>
     </form>
 </main>
 <%- include('../../partials/footer') %>

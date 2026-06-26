@@ -8,11 +8,11 @@ const __dirname = dirname(__filename);
 
 /**
  * Sets up the database by running the seed.sql file if needed.
- * Checks if faculty table has data - if not, runs a full re-seed.
+ * Checks if the users table has data - if not, runs a full re-seed.
  */
 const setupDatabase = async () => {
     /**
-     * Check if faculty table has any rows and wrap in try-catch to handle cases
+     * Check if the users table has any rows; wrap in try-catch to handle cases
      * where table doesn't exist yet.
      */
     let hasData = false;
@@ -34,7 +34,7 @@ const setupDatabase = async () => {
         return true;
     }
 
-    // No faculty found - run full seed
+    // No users found - run full seed
     console.log('Seeding database...');
     const seedPath = join(__dirname, 'sql', 'seed.sql');
     const seedSQL = fs.readFileSync(seedPath, 'utf8');

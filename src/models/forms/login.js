@@ -1,30 +1,37 @@
-import bcrypt from 'bcrypt';
 import db from '../db.js';
+import bcrypt from 'bcrypt';
 
 /**
- * Find a user by email address for login verification.
+ * Data access for login / authentication.
  *
- * @param {string} email - Email address to search for
- * @returns {Promise<Object|null>} User object with password hash or null if not found
+ * Looks users up by email and verifies a submitted password against the
+ * stored bcrypt hash. Returns the role so the session user carries it, which
+ * the auth middleware (owner / staff / customer) depends on.
+ */
+
+/**
+ * Find a single user by email address.
+ *
+ * @param {string} email
+ * @returns {Promise<Object|null>} the user row (including password hash and
+ *   role), or null if no account matches.
  */
 const findUserByEmail = async (email) => {
     const query = `
         SELECT id, name, email, password, role, created_at
         FROM users
-        WHERE LOWER(email) = LOWER($1)
-        LIMIT 1
+        WHERE email = $1
     `;
-
     const result = await db.query(query, [email]);
     return result.rows[0] || null;
 };
 
 /**
- * Verify a plain text password against a stored bcrypt hash.
+ * Compare a plain-text password against a stored bcrypt hash.
  *
- * @param {string} plainPassword - The password to verify
- * @param {string} hashedPassword - The stored password hash
- * @returns {Promise<boolean>} True if password matches, false otherwise
+ * @param {string} plainPassword - the password submitted on the login form
+ * @param {string} hashedPassword - the bcrypt hash stored in the database
+ * @returns {Promise<boolean>} true if the password matches
  */
 const verifyPassword = async (plainPassword, hashedPassword) => {
     return bcrypt.compare(plainPassword, hashedPassword);

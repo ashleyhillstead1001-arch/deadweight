@@ -39,7 +39,7 @@ const saveUser = async (name, email, hashedPassword) => {
  */
 const getAllUsers = async () => {
     const query = `
-        SELECT id, name, email, created_at
+        SELECT id, name, email, role, created_at
         FROM users
         ORDER BY created_at DESC
     `;

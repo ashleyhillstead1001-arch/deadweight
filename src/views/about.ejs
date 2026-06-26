@@ -1,39 +1,28 @@
 <%- include('partials/header') %>
 <main>
-    <h1><%= title %></h1>
-        <p class="description">Welcome to my personal website! This site is a project for my Web Design and Development class at BYU–Idaho, where I am a senior majoring in Web Design and Development. The purpose of this website is to showcase my skills in web development and design, as well as to provide information about me and my interests.</p>
-            <section class="about-layout">
-                <div class="about-image">
-                    <img src="/images/IMG_4522.jpeg" alt="Profile picture of Ashley Hillstead" class="profile-image">
-                </div>
+    <h1>About Deadweight</h1>
+    <p class="lead">Deadweight is a student-run move-out storage service built for the realities of campus life.</p>
 
-                <div class="about-content">
-                    <p>
-                        Hi everyone! My name is Ashley Hillstead, 
-                        and I am a Web Design and Development major 
-                        here at BYU–Idaho. I’m currently in the final 
-                        stretch of my degree and am eager to integrate 
-                        these design principles into my technical toolkit. 
-                        I currently work in IT here on campus, a role I 
-                        love because it allows me to dive into the 
-                        "puzzle-solving" side of technology. For me, 
-                        art and design are most exciting when viewed 
-                        through the lens of logic—focusing on information 
-                        architecture and user experience to ensure that 
-                        what we create is as functional and intuitive as 
-                        it is visually clean.
-                    </p>
+    <p class="description">Every spring, students face the same scramble: lease ending, dorm closing, and nowhere to put a summer's worth of belongings. Hauling everything home and back again is expensive and exhausting. Deadweight exists to make that problem disappear &mdash; we pick up, store, and return your things so the only thing you carry home is a backpack.</p>
 
-                    <div class="hobbies">
-                        <h3>Hobbies & Interests</h3>
-                        <p>Reading Comic Books</p>
-                        <p>Watching Movies & TV Shows</p>
-                        <p>Learning New Technologies</p>
-                        <p>Problem Solving</p>
-                        <p>Music & Playing Piano</p>
-                    </div>
-                    </div>
-                </div>
-            </section>
-    <%- include('partials/footer') %>
+    <div class="feature-grid">
+        <div class="feature">
+            <h3>Built for students</h3>
+            <p>Flexible pickup and return windows that line up with the academic calendar, not a generic moving schedule.</p>
+        </div>
+        <div class="feature">
+            <h3>Accountable by design</h3>
+            <p>Each item is logged and photographed, and every status change is recorded so you always know where your things are.</p>
+        </div>
+        <div class="feature">
+            <h3>People you can reach</h3>
+            <p>Real staff handle pickups and questions. Send us a message and a person gets back to you.</p>
+        </div>
+    </div>
+
+    <div class="hero-actions">
+        <a href="/how-it-works" class="btn btn-secondary">See how it works</a>
+        <a href="/requests/new" class="btn btn-primary">Request storage</a>
+    </div>
 </main>
+<%- include('partials/footer') %>

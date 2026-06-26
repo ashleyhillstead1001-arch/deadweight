@@ -70,21 +70,21 @@ const addLocalVariables = (req, res, next) => {
     res.locals.queryParams = { ...req.query };
 
     // Set greeting based on time of day
-    res.locals.greeting = `<p>${getCurrentGreeting()}</p>`;
-
-    // Randomly assign a theme class to the body
-    const themes = ['blue-theme', 'green-theme', 'red-theme'];
-    const randomTheme = themes[Math.floor(Math.random() * themes.length)];
-    res.locals.bodyClass = randomTheme;
+    res.locals.greeting = getCurrentGreeting();
 
     // INTEGRATION: Inject the head asset management system into this request path
     setHeadAssetsFunctionality(res);
 
-    // Convenience variable for UI state based on session state
-    res.locals.isLoggedIn = false;
-    if (req.session && req.session.user) {
-        res.locals.isLoggedIn = true;
-    }
+    // Auth-aware UI state, available to every view (including public pages) so
+    // the navigation can render the correct links. Role flags mirror the
+    // database user_role enum (owner / staff / customer).
+    const sessionUser = (req.session && req.session.user) || null;
+    res.locals.isLoggedIn = Boolean(sessionUser);
+    res.locals.currentUser = sessionUser;
+    res.locals.userRole = sessionUser ? sessionUser.role : null;
+    res.locals.isAdmin = Boolean(sessionUser) && sessionUser.role === 'owner';
+    res.locals.isEmployee = Boolean(sessionUser) && (sessionUser.role === 'staff' || sessionUser.role === 'owner');
+    res.locals.isStandard = Boolean(sessionUser) && sessionUser.role === 'customer';
 
     // Continue to the next middleware or route handler
     next();

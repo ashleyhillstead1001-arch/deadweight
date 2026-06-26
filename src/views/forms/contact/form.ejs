@@ -1,22 +1,41 @@
 <%- include('../../partials/header') %>
 <main>
-    <h1>Contact Us</h1>
-    <p>
-        Have questions or feedback? Send us a message using the form below and we'll get back to you as soon as possible.
-    </p>
+    <h1>Contact us</h1>
+    <p class="description">Questions about pickup, storage, or returns? Send us a message and a member of our team will get back to you.</p>
 
-    <form method="POST" action="/contact" class="contact-form">
-        <div class="form-group">
+    <% if (typeof sent !== 'undefined' && sent) { %>
+        <div class="alert alert-success">Thanks &mdash; your message has been sent. We'll be in touch soon.</div>
+    <% } %>
+
+    <% if (errors && errors.length > 0) { %>
+        <div class="alert alert-error">
+            <strong>Please fix the following:</strong>
+            <ul style="margin:0.4rem 0 0;padding-left:1.2rem;">
+                <% errors.forEach(e => { %><li><%= e.msg %></li><% }); %>
+            </ul>
+        </div>
+    <% } %>
+
+    <form method="POST" action="/contact" class="form-card">
+        <div class="field-row">
+            <div class="field">
+                <label for="name">Name</label>
+                <input type="text" id="name" name="name" value="<%= values.name || '' %>" required>
+            </div>
+            <div class="field">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" value="<%= values.email || '' %>" required>
+            </div>
+        </div>
+        <div class="field">
             <label for="subject">Subject</label>
-            <input type="text" id="subject" name="subject" placeholder="What is this message about?">
+            <input type="text" id="subject" name="subject" placeholder="What is this about?" value="<%= values.subject || '' %>" required>
         </div>
-
-        <div class="form-group">
+        <div class="field">
             <label for="message">Message</label>
-            <textarea id="message" name="message" rows="6" placeholder="Please provide details about your question or feedback..."></textarea>
+            <textarea id="message" name="message" rows="6" placeholder="How can we help?" required><%= values.message || '' %></textarea>
         </div>
-
-        <button type="submit">Send Message</button>
+        <button type="submit" class="btn btn-primary btn-block">Send message</button>
     </form>
 </main>
 <%- include('../../partials/footer') %>
