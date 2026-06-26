@@ -15,7 +15,7 @@
     },
     "type": "module",
     "scripts": {
-        "dev": "nodemon --env-file=.env server.js",
+        "dev": "nodemon",
         "start": "node server.js",
         "build": "pnpm config set onlyBuiltDependencies [] && pnpm install --dangerously-allow-all-builds"
     }

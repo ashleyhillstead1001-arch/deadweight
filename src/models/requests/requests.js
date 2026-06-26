@@ -186,6 +186,45 @@ const updateRequestStatus = async ({ requestId, status, changedBy, note }) => {
     }
 };
 
+/**
+ * Update the editable fields of a request (not its status — that goes through
+ * updateRequestStatus so the timeline stays accurate). Parameterized.
+ */
+const updateRequest = async ({ requestId, itemName, itemDescription, requestedVolume, pickupDate, returnDate, notes }) => {
+    const query = `
+        UPDATE storage_requests
+        SET item_name = $1,
+            item_description = $2,
+            requested_volume = $3,
+            pickup_date = $4,
+            return_date = $5,
+            notes = $6,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = $7
+        RETURNING *
+    `;
+    const result = await db.query(query, [
+        itemName,
+        itemDescription || null,
+        requestedVolume,
+        pickupDate || null,
+        returnDate || null,
+        notes || null,
+        requestId
+    ]);
+    return result.rows[0] || null;
+};
+
+/**
+ * Delete a request by id. status_history and item_images are removed
+ * automatically by the schema's ON DELETE CASCADE.
+ */
+const deleteRequest = async (requestId) => {
+    const query = `DELETE FROM storage_requests WHERE id = $1 RETURNING id`;
+    const result = await db.query(query, [requestId]);
+    return result.rowCount > 0;
+};
+
 export {
     getAllRequests,
     getRequestsByUser,
@@ -194,5 +233,7 @@ export {
     getImagesForRequest,
     getReviewsForRequest,
     createRequest,
-    updateRequestStatus
+    updateRequest,
+    updateRequestStatus,
+    deleteRequest
 };

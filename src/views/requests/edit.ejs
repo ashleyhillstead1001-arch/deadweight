@@ -1,0 +1,51 @@
+<%- include('../partials/header') %>
+<main>
+    <p style="margin:0 0 0.75rem;"><a href="/requests/<%= request.id %>">&larr; Back to request</a></p>
+    <h1>Edit request</h1>
+    <p class="description">Update the details for this storage request.</p>
+
+    <% if (errors && errors.length > 0) { %>
+        <div class="alert alert-error">
+            <strong>Please fix the following:</strong>
+            <ul style="margin:0.4rem 0 0;padding-left:1.2rem;">
+                <% errors.forEach(e => { %><li><%= e.msg %></li><% }); %>
+            </ul>
+        </div>
+    <% } %>
+
+    <form class="form-card" action="/requests/<%= request.id %>/edit" method="POST">
+        <div class="field">
+            <label for="item_name">What are you storing?</label>
+            <input type="text" id="item_name" name="item_name" value="<%= values.item_name || '' %>" required>
+        </div>
+
+        <div class="field">
+            <label for="item_description">Description <span class="muted">(optional)</span></label>
+            <textarea id="item_description" name="item_description" rows="3"><%= values.item_description || '' %></textarea>
+        </div>
+
+        <div class="field">
+            <label for="requested_volume">Estimated volume (ft&sup3;)</label>
+            <input type="number" id="requested_volume" name="requested_volume" min="0" step="0.25" value="<%= values.requested_volume || '' %>" required>
+        </div>
+
+        <div class="field-row">
+            <div class="field">
+                <label for="pickup_date">Preferred pickup date</label>
+                <input type="date" id="pickup_date" name="pickup_date" value="<%= values.pickup_date || '' %>">
+            </div>
+            <div class="field">
+                <label for="return_date">Preferred return date</label>
+                <input type="date" id="return_date" name="return_date" value="<%= values.return_date || '' %>">
+            </div>
+        </div>
+
+        <div class="field">
+            <label for="notes">Notes <span class="muted">(optional)</span></label>
+            <textarea id="notes" name="notes" rows="2"><%= values.notes || '' %></textarea>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block">Save changes</button>
+    </form>
+</main>
+<%- include('../partials/footer') %>

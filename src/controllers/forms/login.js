@@ -67,7 +67,18 @@ const processLogin = async (req, res) => {
         };
 
         req.session.user = sessionUser;
-        return res.redirect('/dashboard');
+
+        // Persist the session to the store BEFORE redirecting. Without this,
+        // res.redirect can fire before the async write to Postgres finishes,
+        // so the cookie is never set and the next request looks logged-out.
+        // Saving explicitly also surfaces any store error instead of swallowing it.
+        return req.session.save((saveErr) => {
+            if (saveErr) {
+                console.error('SESSION SAVE FAILED:', saveErr);
+                return res.redirect('/login');
+            }
+            return res.redirect('/dashboard');
+        });
     } catch (error) {
         console.error('Error processing login:', error);
         return res.redirect('/login');

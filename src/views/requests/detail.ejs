@@ -110,6 +110,42 @@
                     <p class="muted" style="margin-top:1rem;font-size:0.9rem;"><strong>Notes:</strong> <%= request.notes %></p>
                 <% } %>
             </div>
+
+            <%
+                const canManage = (typeof isEmployee !== 'undefined' && isEmployee)
+                    || (currentUser && currentUser.id === request.user_id);
+            %>
+            <% if (canManage) { %>
+                <div class="panel">
+                    <h2>Actions</h2>
+                    <a href="/requests/<%= request.id %>/edit" class="btn btn-secondary btn-block" style="margin-bottom:0.6rem;">Edit request</a>
+                    <form action="/requests/<%= request.id %>/delete" method="POST"
+                          onsubmit="return confirm('Delete this request? This cannot be undone.');">
+                        <button type="submit" class="btn btn-ghost btn-block" style="color:#a32d2d;">Delete request</button>
+                    </form>
+                </div>
+            <% } %>
+
+            <% if (typeof isEmployee !== 'undefined' && isEmployee) { %>
+                <div class="panel">
+                    <h2>Update status</h2>
+                    <form action="/requests/<%= request.id %>/status" method="POST">
+                        <div class="field">
+                            <label for="status">New status</label>
+                            <select id="status" name="status" required>
+                                <% statuses.forEach(s => { %>
+                                    <option value="<%= s %>" <%= s === request.current_status ? 'selected' : '' %>><%= labels[s] %></option>
+                                <% }); %>
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label for="note">Note <span class="muted">(optional)</span></label>
+                            <input type="text" id="note" name="note" placeholder="Added to the timeline">
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-block">Update status</button>
+                    </form>
+                </div>
+            <% } %>
         </aside>
     </div>
 </main>
