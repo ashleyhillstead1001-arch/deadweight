@@ -7,6 +7,10 @@ import {
     getStatusHistory,
     getImagesForRequest,
     getReviewsForRequest,
+    getReviewById,
+    createReview,
+    updateReview,
+    deleteReview,
     createRequest,
     updateRequest,
     updateRequestStatus,
@@ -293,6 +297,169 @@ const handleDeleteRequest = async (req, res, next) => {
     }
 };
 
+/**
+ * Load a review by id and enforce that the current user is its author.
+ * Returns the review, or calls next(err) and returns null (404 / 403).
+ * Unlike requests, staff/owner do NOT get to edit or delete others' reviews —
+ * a review is personal to the account that wrote it.
+ */
+const loadOwnReview = async (req, next) => {
+    const id = Number.parseInt(req.params.reviewId, 10);
+    if (Number.isNaN(id)) {
+        const err = new Error('Review not found');
+        err.status = 404;
+        next(err);
+        return null;
+    }
+
+    const review = await getReviewById(id);
+    if (!review) {
+        const err = new Error('Review not found');
+        err.status = 404;
+        next(err);
+        return null;
+    }
+
+    if (review.user_id !== req.session.user.id) {
+        const err = new Error('You can only edit or delete your own reviews.');
+        err.status = 403;
+        next(err);
+        return null;
+    }
+
+    return review;
+};
+
+/**
+ * Validation shared by review create and edit: rating 1-5, comment optional
+ * but length-bounded and not just whitespace when present.
+ */
+const reviewValidation = [
+    body('rating')
+        .trim()
+        .isInt({ min: 1, max: 5 })
+        .withMessage('Rating must be a whole number from 1 to 5.'),
+    body('comment')
+        .trim()
+        .isLength({ max: 2000 })
+        .withMessage('Comment must be 2000 characters or fewer.')
+];
+
+/**
+ * POST /requests/:id/reviews — create a review on a request for the signed-in
+ * user. Validation errors re-render the detail page with the messages.
+ */
+const handleCreateReview = async (req, res, next) => {
+    try {
+        const id = Number.parseInt(req.params.id, 10);
+        if (Number.isNaN(id)) {
+            const err = new Error('Request not found');
+            err.status = 404;
+            return next(err);
+        }
+
+        const request = await getRequestById(id);
+        if (!request) {
+            const err = new Error('Request not found');
+            err.status = 404;
+            return next(err);
+        }
+
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            // Re-render detail with the same data plus review errors.
+            const [history, images, reviews] = await Promise.all([
+                getStatusHistory(id),
+                getImagesForRequest(id),
+                getReviewsForRequest(id)
+            ]);
+            const currentIndex = REQUEST_STATUSES.indexOf(request.current_status);
+            return res.status(400).render('requests/detail', {
+                title: request.item_name,
+                request, history, images, reviews,
+                statuses: REQUEST_STATUSES, currentIndex,
+                reviewErrors: errors.array(),
+                reviewValues: req.body
+            });
+        }
+
+        await createReview({
+            userId: req.session.user.id,
+            storageRequestId: id,
+            rating: req.body.rating,
+            comment: req.body.comment
+        });
+        res.redirect(`/requests/${id}#reviews`);
+    } catch (err) {
+        next(err);
+    }
+};
+
+/**
+ * GET /requests/:id/reviews/:reviewId/edit — edit form for the author's review.
+ */
+const showEditReviewForm = async (req, res, next) => {
+    try {
+        const review = await loadOwnReview(req, next);
+        if (!review) return;
+
+        res.render('requests/edit-review', {
+            title: 'Edit review',
+            requestId: req.params.id,
+            review,
+            errors: [],
+            values: { rating: review.rating, comment: review.comment || '' }
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+/**
+ * POST /requests/:id/reviews/:reviewId/edit — save edits to the author's review.
+ */
+const handleEditReview = async (req, res, next) => {
+    try {
+        const review = await loadOwnReview(req, next);
+        if (!review) return;
+
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).render('requests/edit-review', {
+                title: 'Edit review',
+                requestId: req.params.id,
+                review,
+                errors: errors.array(),
+                values: req.body
+            });
+        }
+
+        await updateReview({
+            reviewId: review.id,
+            rating: req.body.rating,
+            comment: req.body.comment
+        });
+        res.redirect(`/requests/${req.params.id}#reviews`);
+    } catch (err) {
+        next(err);
+    }
+};
+
+/**
+ * POST /requests/:id/reviews/:reviewId/delete — delete the author's own review.
+ */
+const handleDeleteReview = async (req, res, next) => {
+    try {
+        const review = await loadOwnReview(req, next);
+        if (!review) return;
+
+        await deleteReview(review.id);
+        res.redirect(`/requests/${req.params.id}#reviews`);
+    } catch (err) {
+        next(err);
+    }
+};
+
 /* ----------------------------- Routes ----------------------------- */
 
 router.get('/', requireLogin, showMyRequests);
@@ -355,6 +522,12 @@ router.post('/:id/edit',
 
 // Update — advance workflow status (staff/owner only)
 router.post('/:id/status', requireEmployee, handleStatusChange);
+
+// Reviews — any signed-in user may post; only the author may edit/delete.
+router.post('/:id/reviews', requireLogin, reviewValidation, handleCreateReview);
+router.get('/:id/reviews/:reviewId/edit', requireLogin, showEditReviewForm);
+router.post('/:id/reviews/:reviewId/edit', requireLogin, reviewValidation, handleEditReview);
+router.post('/:id/reviews/:reviewId/delete', requireLogin, handleDeleteReview);
 
 // Delete — remove a request (owner of the request, or staff/owner)
 router.post('/:id/delete', requireLogin, handleDeleteRequest);

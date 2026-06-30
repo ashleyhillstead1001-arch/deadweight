@@ -76,7 +76,7 @@
                 <% } %>
             </div>
 
-            <div class="panel">
+            <div class="panel" id="reviews">
                 <h2>Reviews</h2>
                 <% if (reviews && reviews.length > 0) { %>
                     <% reviews.forEach(rv => { %>
@@ -84,10 +84,45 @@
                             <div class="stars" aria-label="<%= rv.rating %> out of 5 stars"><% for (let i = 0; i < 5; i++) { %><%= i < rv.rating ? '\u2605' : '\u2606' %><% } %></div>
                             <% if (rv.comment) { %><p style="margin:0.3rem 0;"><%= rv.comment %></p><% } %>
                             <p class="by" style="margin:0;">&mdash; <%= rv.reviewer_name %>, <%= new Date(rv.created_at).toLocaleDateString('en-US', { dateStyle: 'medium' }) %></p>
+                            <% if (typeof currentUser !== 'undefined' && currentUser && rv.user_id === currentUser.id) { %>
+                                <div class="review-actions" style="margin-top:0.4rem; display:flex; gap:0.5rem;">
+                                    <a class="btn btn-small" href="/requests/<%= request.id %>/reviews/<%= rv.id %>/edit">Edit</a>
+                                    <form action="/requests/<%= request.id %>/reviews/<%= rv.id %>/delete" method="POST" onsubmit="return confirm('Delete this review?');" style="margin:0;">
+                                        <button type="submit" class="btn btn-small btn-danger">Delete</button>
+                                    </form>
+                                </div>
+                            <% } %>
                         </div>
                     <% }); %>
                 <% } else { %>
                     <p class="muted" style="margin:0;">No reviews yet.</p>
+                <% } %>
+
+                <% if (typeof isLoggedIn !== 'undefined' && isLoggedIn) { %>
+                    <div class="review-form" style="margin-top:1rem;">
+                        <h3 style="margin-bottom:0.5rem;">Leave a review</h3>
+                        <% if (typeof reviewErrors !== 'undefined' && reviewErrors && reviewErrors.length > 0) { %>
+                            <ul class="errors" style="color:#b00020; margin:0 0 0.5rem 1rem;">
+                                <% reviewErrors.forEach(e => { %><li><%= e.msg %></li><% }); %>
+                            </ul>
+                        <% } %>
+                        <form action="/requests/<%= request.id %>/reviews" method="POST">
+                            <div class="field">
+                                <label for="rating">Rating</label>
+                                <select id="rating" name="rating" required>
+                                    <option value="" <%= (typeof reviewValues === 'undefined' || !reviewValues || !reviewValues.rating) ? 'selected' : '' %>>Select a rating&hellip;</option>
+                                    <% for (let r = 5; r >= 1; r--) { %>
+                                        <option value="<%= r %>" <%= (typeof reviewValues !== 'undefined' && reviewValues && String(reviewValues.rating) === String(r)) ? 'selected' : '' %>><%= r %> star<%= r === 1 ? '' : 's' %></option>
+                                    <% } %>
+                                </select>
+                            </div>
+                            <div class="field">
+                                <label for="comment">Comment <span class="muted">(optional)</span></label>
+                                <textarea id="comment" name="comment" rows="3" placeholder="Share your experience"><%= (typeof reviewValues !== 'undefined' && reviewValues) ? reviewValues.comment : '' %></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Post review</button>
+                        </form>
+                    </div>
                 <% } %>
             </div>
         </div>

@@ -96,7 +96,8 @@ const getImagesForRequest = async (requestId) => {
  */
 const getReviewsForRequest = async (requestId) => {
     const query = `
-        SELECT rv.rating, rv.comment, rv.created_at, u.name AS reviewer_name
+        SELECT rv.id, rv.user_id, rv.rating, rv.comment, rv.created_at,
+               u.name AS reviewer_name
         FROM reviews rv
         JOIN users u ON u.id = rv.user_id
         WHERE rv.storage_request_id = $1
@@ -225,6 +226,53 @@ const deleteRequest = async (requestId) => {
     return result.rowCount > 0;
 };
 
+/**
+ * A single review by id (for ownership checks before edit/delete).
+ */
+const getReviewById = async (id) => {
+    const query = `SELECT id, user_id, storage_request_id, rating, comment, created_at
+                   FROM reviews WHERE id = $1`;
+    const result = await db.query(query, [id]);
+    return result.rows[0] || null;
+};
+
+/**
+ * Create a review tied to a request and the authoring user.
+ */
+const createReview = async ({ userId, storageRequestId, rating, comment }) => {
+    const query = `
+        INSERT INTO reviews (user_id, storage_request_id, rating, comment)
+        VALUES ($1, $2, $3, $4)
+        RETURNING *
+    `;
+    const result = await db.query(query, [userId, storageRequestId, rating, comment || null]);
+    return result.rows[0];
+};
+
+/**
+ * Update an existing review's rating and comment. Ownership is enforced in the
+ * controller; this only touches the given review id.
+ */
+const updateReview = async ({ reviewId, rating, comment }) => {
+    const query = `
+        UPDATE reviews
+        SET rating = $1, comment = $2
+        WHERE id = $3
+        RETURNING *
+    `;
+    const result = await db.query(query, [rating, comment || null, reviewId]);
+    return result.rows[0] || null;
+};
+
+/**
+ * Delete a review by id.
+ */
+const deleteReview = async (reviewId) => {
+    const query = `DELETE FROM reviews WHERE id = $1 RETURNING id`;
+    const result = await db.query(query, [reviewId]);
+    return result.rowCount > 0;
+};
+
 export {
     getAllRequests,
     getRequestsByUser,
@@ -232,6 +280,10 @@ export {
     getStatusHistory,
     getImagesForRequest,
     getReviewsForRequest,
+    getReviewById,
+    createReview,
+    updateReview,
+    deleteReview,
     createRequest,
     updateRequest,
     updateRequestStatus,

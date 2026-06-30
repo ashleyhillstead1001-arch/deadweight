@@ -1,0 +1,35 @@
+<%- include('../partials/header') %>
+<main>
+    <p style="margin:0 0 0.75rem;"><a href="/requests/<%= requestId %>#reviews">&larr; Back to request</a></p>
+    <h1>Edit review</h1>
+    <p class="description">Update your rating or comment.</p>
+
+    <% if (errors && errors.length > 0) { %>
+        <div class="alert alert-error">
+            <strong>Please fix the following:</strong>
+            <ul style="margin:0.4rem 0 0;padding-left:1.2rem;">
+                <% errors.forEach(e => { %><li><%= e.msg %></li><% }); %>
+            </ul>
+        </div>
+    <% } %>
+
+    <form class="form-card" action="/requests/<%= requestId %>/reviews/<%= review.id %>/edit" method="POST">
+        <div class="field">
+            <label for="rating">Rating</label>
+            <select id="rating" name="rating" required>
+                <option value="" <%= !values.rating ? 'selected' : '' %>>Select a rating&hellip;</option>
+                <% for (let r = 5; r >= 1; r--) { %>
+                    <option value="<%= r %>" <%= String(values.rating) === String(r) ? 'selected' : '' %>><%= r %> star<%= r === 1 ? '' : 's' %></option>
+                <% } %>
+            </select>
+        </div>
+
+        <div class="field">
+            <label for="comment">Comment <span class="muted">(optional)</span></label>
+            <textarea id="comment" name="comment" rows="4"><%= values.comment || '' %></textarea>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block">Save review</button>
+    </form>
+</main>
+<%- include('../partials/footer') %>
