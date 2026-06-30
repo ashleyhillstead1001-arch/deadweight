@@ -130,17 +130,17 @@ CREATE TABLE item_images (
 -- SEED DATA
 -- ===========================================================================
 -- NOTE: every password below is the SAME bcrypt hash of the string  P@$$w0rd!
--- Replace the placeholder $2b$10$pjww4PPzj/kQ0BOUv.jp9eyOQZRaN8PEORCAfko1cidrc4nX/AALy with a real hash you generate
+-- Replace the placeholder $2b$10$TdWqwduzpC3kPA..SnhhXOubmP4jkmtWhFW/dsJHgp22.bYXTo55O with a real hash you generate
 -- locally (see the note that came with this file). All five accounts share
 -- the password  P@$$w0rd!  so each role is easy to test.
 
 -- One account per role (owner, staff, customer) + extra customers for data
 INSERT INTO users (name, email, password, role) VALUES
-    ('Avery Blake',  'owner@deadweight.example',    '$2b$10$pjww4PPzj/kQ0BOUv.jp9eyOQZRaN8PEORCAfko1cidrc4nX/AALy', 'owner'),
-    ('Jules Morgan', 'staff@deadweight.example',    '$2b$10$pjww4PPzj/kQ0BOUv.jp9eyOQZRaN8PEORCAfko1cidrc4nX/AALy', 'staff'),
-    ('Morgan Lee',   'customer@deadweight.example', '$2b$10$pjww4PPzj/kQ0BOUv.jp9eyOQZRaN8PEORCAfko1cidrc4nX/AALy', 'customer'),
-    ('Taylor Brooks','taylor.brooks@deadweight.example', '$2b$10$pjww4PPzj/kQ0BOUv.jp9eyOQZRaN8PEORCAfko1cidrc4nX/AALy', 'customer'),
-    ('Sam Rivera',   'sam.rivera@deadweight.example',    '$2b$10$pjww4PPzj/kQ0BOUv.jp9eyOQZRaN8PEORCAfko1cidrc4nX/AALy', 'customer');
+    ('Avery Blake',  'owner@deadweight.example',    '$2b$10$TdWqwduzpC3kPA..SnhhXOubmP4jkmtWhFW/dsJHgp22.bYXTo55O', 'owner'),
+    ('Jules Morgan', 'staff@deadweight.example',    '$2b$10$TdWqwduzpC3kPA..SnhhXOubmP4jkmtWhFW/dsJHgp22.bYXTo55O', 'staff'),
+    ('Morgan Lee',   'customer@deadweight.example', '$2b$10$TdWqwduzpC3kPA..SnhhXOubmP4jkmtWhFW/dsJHgp22.bYXTo55O', 'customer'),
+    ('Taylor Brooks','taylor.brooks@deadweight.example', '$2b$10$TdWqwduzpC3kPA..SnhhXOubmP4jkmtWhFW/dsJHgp22.bYXTo55O', 'customer'),
+    ('Sam Rivera',   'sam.rivera@deadweight.example',    '$2b$10$TdWqwduzpC3kPA..SnhhXOubmP4jkmtWhFW/dsJHgp22.bYXTo55O', 'customer');
 
 -- Storage requests (statuses drawn from the request_status enum)
 INSERT INTO storage_requests
