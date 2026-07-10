@@ -13,6 +13,7 @@ import loginRoutes, { processLogout, showDashboard } from './forms/login.js';
 
 // Auth middleware
 import { requireLogin } from '../middleware/auth.js';
+import adminRoutes from './admin.js';
 
 const router = Router();
 
@@ -37,5 +38,6 @@ router.use('/login', loginRoutes);
 // Auth-related root routes
 router.get('/logout', processLogout);
 router.get('/dashboard', requireLogin, showDashboard);
+router.use('/admin', adminRoutes);
 
 export default router;

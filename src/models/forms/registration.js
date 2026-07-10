@@ -47,4 +47,15 @@ const getAllUsers = async () => {
     return result.rows;
 };
 
-export { emailExists, saveUser, getAllUsers };
+const updateUserRole = async ({ userId, role }) => {
+    const query = `
+        UPDATE users
+        SET role = $1, updated_at = CURRENT_TIMESTAMP
+        WHERE id = $2
+        RETURNING id, name, email, role
+    `;
+    const result = await db.query(query, [role, userId]);
+    return result.rows[0] || null;
+};
+
+export { emailExists, saveUser, getAllUsers, updateUserRole };

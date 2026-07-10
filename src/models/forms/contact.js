@@ -42,4 +42,15 @@ const getAllContactMessages = async () => {
     return result.rows;
 };
 
-export { createContactMessage, getAllContactMessages };
+const updateContactMessageStatus = async ({ messageId, status }) => {
+    const query = `
+        UPDATE contact_messages
+        SET status = $1
+        WHERE id = $2
+        RETURNING id, status
+    `;
+    const result = await db.query(query, [status, messageId]);
+    return result.rows[0] || null;
+};
+
+export { createContactMessage, getAllContactMessages, updateContactMessageStatus };

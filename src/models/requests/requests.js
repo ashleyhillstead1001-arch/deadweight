@@ -107,6 +107,18 @@ const getReviewsForRequest = async (requestId) => {
     return result.rows;
 };
 
+const getAllReviews = async () => {
+    const query = `
+        SELECT rv.id, rv.rating, rv.comment, rv.created_at,
+               rv.storage_request_id, u.name AS reviewer_name, u.email AS reviewer_email
+        FROM reviews rv
+        JOIN users u ON u.id = rv.user_id
+        ORDER BY rv.created_at DESC
+    `;
+    const result = await db.query(query);
+    return result.rows;
+};
+
 /**
  * Create a new storage request, then log the opening 'requested' status in
  * the same transaction so the timeline always starts correctly.
@@ -280,6 +292,7 @@ export {
     getStatusHistory,
     getImagesForRequest,
     getReviewsForRequest,
+    getAllReviews,
     getReviewById,
     createReview,
     updateReview,

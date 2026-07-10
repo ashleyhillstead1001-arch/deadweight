@@ -1,0 +1,189 @@
+<%- include('../partials/header') %>
+<main>
+    <div class="section-head">
+        <div>
+            <h1 style="margin-bottom:0.25rem;">Admin dashboard</h1>
+            <p class="description">Manage users, requests, submissions, and moderation from one place.</p>
+        </div>
+        <a href="/requests/all" class="btn btn-secondary">View all requests</a>
+    </div>
+
+    <% if (success) { %>
+        <div class="alert alert-success"><%= success %></div>
+    <% } %>
+    <% if (error) { %>
+        <div class="alert alert-error"><%= error %></div>
+    <% } %>
+
+    <div class="feature-grid">
+        <div class="feature">
+            <h3><%= users.length %></h3>
+            <p>Registered users</p>
+        </div>
+        <div class="feature">
+            <h3><%= requests.length %></h3>
+            <p>Storage requests</p>
+        </div>
+        <div class="feature">
+            <h3><%= messages.length %></h3>
+            <p>Submissions</p>
+        </div>
+        <div class="feature">
+            <h3><%= reviews.length %></h3>
+            <p>Reviews pending moderation</p>
+        </div>
+    </div>
+
+    <section class="panel">
+        <div class="section-head">
+            <h2 style="margin:0;">Users and roles</h2>
+        </div>
+        <div style="overflow:auto;">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Role</th>
+                        <th>Joined</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% users.forEach(user => { %>
+                        <tr>
+                            <td><%= user.name %></td>
+                            <td><%= user.email %></td>
+                            <td style="text-transform:capitalize;"><%= user.role %></td>
+                            <td><%= new Date(user.created_at).toLocaleDateString('en-US', { dateStyle: 'medium' }) %></td>
+                            <td>
+                                <form action="/admin/users/<%= user.id %>/role" method="POST" style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+                                    <select name="role" style="min-width:120px;">
+                                        <option value="customer" <%= user.role === 'customer' ? 'selected' : '' %>>Customer</option>
+                                        <option value="staff" <%= user.role === 'staff' ? 'selected' : '' %>>Staff</option>
+                                        <option value="owner" <%= user.role === 'owner' ? 'selected' : '' %>>Owner</option>
+                                    </select>
+                                    <button class="btn btn-secondary" type="submit" <%= currentUser && currentUser.id === user.id ? 'disabled' : '' %>>Save</button>
+                                </form>
+                            </td>
+                        </tr>
+                    <% }); %>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="panel">
+        <div class="section-head">
+            <h2 style="margin:0;">Storage requests</h2>
+            <a href="/requests/all">Open request queue</a>
+        </div>
+        <div style="overflow:auto;">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Request</th>
+                        <th>Owner</th>
+                        <th>Status</th>
+                        <th>Updated</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% requests.slice(0, 10).forEach(request => { %>
+                        <tr>
+                            <td><a href="/requests/<%= request.id %>"><%= request.item_name %></a></td>
+                            <td><%= request.owner_name %></td>
+                            <td><span class="status status-<%= request.current_status %>"><%= request.current_status.replace(/_/g, ' ') %></span></td>
+                            <td><%= new Date(request.created_at).toLocaleDateString('en-US', { dateStyle: 'medium' }) %></td>
+                            <td>
+                                <form action="/admin/requests/<%= request.id %>/status" method="POST" style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+                                    <select name="status" style="min-width:150px;">
+                                        <% REQUEST_STATUSES.forEach(status => { %>
+                                            <option value="<%= status %>" <%= request.current_status === status ? 'selected' : '' %>><%= status.replace(/_/g, ' ') %></option>
+                                        <% }); %>
+                                    </select>
+                                    <button class="btn btn-secondary" type="submit">Update</button>
+                                </form>
+                            </td>
+                        </tr>
+                    <% }); %>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="panel">
+        <div class="section-head">
+            <h2 style="margin:0;">Submissions and messages</h2>
+        </div>
+        <div style="overflow:auto;">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Subject</th>
+                        <th>Status</th>
+                        <th>Received</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% messages.slice(0, 10).forEach(message => { %>
+                        <tr>
+                            <td><%= message.name %><br><span class="muted" style="font-size:0.8rem;"><%= message.email %></span></td>
+                            <td><%= message.subject %></td>
+                            <td><%= message.status %></td>
+                            <td><%= new Date(message.received_at).toLocaleDateString('en-US', { dateStyle: 'medium' }) %></td>
+                            <td>
+                                <form action="/admin/messages/<%= message.id %>/status" method="POST" style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+                                    <select name="status" style="min-width:120px;">
+                                        <option value="received" <%= message.status === 'received' ? 'selected' : '' %>>Received</option>
+                                        <option value="replied" <%= message.status === 'replied' ? 'selected' : '' %>>Replied</option>
+                                        <option value="closed" <%= message.status === 'closed' ? 'selected' : '' %>>Closed</option>
+                                    </select>
+                                    <button class="btn btn-secondary" type="submit">Save</button>
+                                </form>
+                            </td>
+                        </tr>
+                    <% }); %>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="panel">
+        <div class="section-head">
+            <h2 style="margin:0;">Moderation queue</h2>
+        </div>
+        <div style="overflow:auto;">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Reviewer</th>
+                        <th>Rating</th>
+                        <th>Comment</th>
+                        <th>Posted</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% reviews.slice(0, 10).forEach(review => { %>
+                        <tr>
+                            <td><%= review.reviewer_name %><br><span class="muted" style="font-size:0.8rem;"><%= review.reviewer_email %></span></td>
+                            <td><%= review.rating %>/5</td>
+                            <td><%= review.comment || '—' %></td>
+                            <td><%= new Date(review.created_at).toLocaleDateString('en-US', { dateStyle: 'medium' }) %></td>
+                            <td>
+                                <form action="/admin/reviews/<%= review.id %>/delete" method="POST">
+                                    <button class="btn btn-secondary" type="submit">Remove</button>
+                                </form>
+                            </td>
+                        </tr>
+                    <% }); %>
+                </tbody>
+            </table>
+        </div>
+    </section>
+</main>
+<%- include('../partials/footer') %>
