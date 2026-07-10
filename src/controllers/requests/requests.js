@@ -342,7 +342,9 @@ const reviewValidation = [
     body('comment')
         .trim()
         .isLength({ max: 2000 })
-        .withMessage('Comment must be 2000 characters or fewer.')
+        .withMessage('Comment must be 2000 characters or fewer')
+        .escape()
+        .optional({ values: 'falsy' })
 ];
 
 /**

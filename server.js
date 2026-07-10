@@ -1,6 +1,7 @@
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import helmet from 'helmet';
 import { setupDatabase, testConnection } from './src/models/setup.js';
 
 // Import MVC components
@@ -26,24 +27,39 @@ const PORT = process.env.PORT || 3000;
 const app = express();
 
 /**
- * 1. Static Files (First priority - bypasses parsers/sessions for assets)
+ * 1. Security Headers (Helmet)
+ */
+app.use(helmet({
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            styleSrc: ["'self'", "'unsafe-inline'"],
+            scriptSrc: ["'self'"],
+            imgSrc: ["'self'", 'data:', 'https:']
+        }
+    },
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' }
+}));
+
+/**
+ * 2. Static Files (First priority - bypasses parsers/sessions for assets)
  */
 app.use(express.static(path.join(__dirname, 'public')));
 
 /**
- * 2. Template Engine Configuration
+ * 3. Template Engine Configuration
  */
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'src/views'));
 
 /**
- * 3. Request Body Parsers (MUST run before Sessions and Routes)
+ * 4. Request Body Parsers (MUST run before Sessions and Routes)
  */
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
 /**
- * 4. Session Configuration (Safe now that body data is parsed)
+ * 5. Session Configuration (Safe now that body data is parsed)
  */
 const pgSession = connectPgSimple(session);
 
@@ -79,12 +95,12 @@ app.use(session({
 }));
 
 /**
- * 5. Global Custom Middleware (Has access to req.body and req.session)
+ * 6. Global Custom Middleware (Has access to req.body and req.session)
  */
 app.use(addLocalVariables);
 
 /**
- * 6. Application Routing
+ * 7. Application Routing
  */
 app.use('/', routes);
 
@@ -92,7 +108,7 @@ app.use('/', routes);
 startSessionCleanup();
 
 /**
- * 7. Error Handling (Always dead last)
+ * 8. Error Handling (Always dead last)
  */
 // 404 handler
 app.use((req, res, next) => {

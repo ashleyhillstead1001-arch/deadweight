@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { body, validationResult } from 'express-validator';
 import { createContactMessage, getAllContactMessages } from '../../models/forms/contact.js';
 import { requireEmployee } from '../../middleware/auth.js';
+import { contactLimiter } from '../../middleware/rate-limit.js';
 
 const router = Router();
 
@@ -68,11 +69,29 @@ const showContactResponses = async (req, res, next) => {
 
 router.get('/', showContactForm);
 router.post('/',
+    contactLimiter,
     [
-        body('name').trim().isLength({ min: 2 }).withMessage('Please enter your name.'),
-        body('email').trim().isEmail().withMessage('Please enter a valid email address.').normalizeEmail(),
-        body('subject').trim().isLength({ min: 2 }).withMessage('Subject must be at least 2 characters.'),
-        body('message').trim().isLength({ min: 10 }).withMessage('Message must be at least 10 characters.')
+        body('name')
+            .trim()
+            .isLength({ min: 2, max: 255 })
+            .withMessage('Name must be between 2 and 255 characters')
+            .escape(),
+        body('email')
+            .trim()
+            .isEmail()
+            .normalizeEmail()
+            .isLength({ max: 255 })
+            .escape(),
+        body('subject')
+            .trim()
+            .isLength({ min: 2, max: 255 })
+            .withMessage('Subject must be between 2 and 255 characters')
+            .escape(),
+        body('message')
+            .trim()
+            .isLength({ min: 10, max: 10000 })
+            .withMessage('Message must be between 10 and 10,000 characters')
+            .escape()
     ],
     handleContactSubmission
 );

@@ -3,6 +3,7 @@ import { body, validationResult } from 'express-validator';
 import bcrypt from 'bcrypt';
 import { emailExists, saveUser, getAllUsers } from '../../models/forms/registration.js';
 import { requireEmployee } from '../../middleware/auth.js';
+import { registrationLimiter } from '../../middleware/rate-limit.js';
 
 const router = Router();
 
@@ -12,24 +13,31 @@ const router = Router();
 const registrationValidation = [
     body('name')
         .trim()
-        .isLength({ min: 2 })
-        .withMessage('Name must be at least 2 characters'),
+        .isLength({ min: 2, max: 255 })
+        .withMessage('Name must be between 2 and 255 characters')
+        .escape(),
     body('email')
         .trim()
         .isEmail()
         .normalizeEmail()
-        .withMessage('Must be a valid email address'),
+        .isLength({ max: 255 })
+        .withMessage('Email must be at most 255 characters')
+        .escape(),
     body('emailConfirm')
         .trim()
+        .isEmail()
+        .normalizeEmail()
         .custom((value, { req }) => value === req.body.email)
         .withMessage('Email addresses must match'),
     body('password')
-        .isLength({ min: 8 })
+        .isLength({ min: 8, max: 255 })
+        .withMessage('Password must be between 8 and 255 characters')
         .matches(/[0-9]/)
         .withMessage('Password must contain at least one number')
         .matches(/[!@#$%^&*]/)
         .withMessage('Password must contain at least one special character'),
     body('passwordConfirm')
+        .isLength({ min: 8, max: 255 })
         .custom((value, { req }) => value === req.body.password)
         .withMessage('Passwords must match')
 ];
@@ -49,7 +57,7 @@ const showRegistrationForm = (req, res) => {
 const processRegistration = async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-        console.error('Validation errors:', errors.array());
+        // Don't log details — render with errors instead
         return res.redirect('/register');
     }
 
@@ -58,7 +66,7 @@ const processRegistration = async (req, res) => {
     try {
         const alreadyExists = await emailExists(email);
         if (alreadyExists) {
-            console.warn(`Registration failed: Email ${email} already registered.`);
+            // Generic message — don't reveal if email exists
             return res.redirect('/register');
         }
 
@@ -97,7 +105,7 @@ const showAllUsers = async (req, res) => {
  * Route Mapping
  */
 router.get('/', showRegistrationForm);
-router.post('/', registrationValidation, processRegistration);
+router.post('/', registrationLimiter, registrationValidation, processRegistration);
 // Listing every registered user is sensitive — restrict to staff and owner.
 router.get('/list', requireEmployee, showAllUsers);
 

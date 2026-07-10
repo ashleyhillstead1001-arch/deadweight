@@ -1,6 +1,7 @@
 import { body, validationResult } from 'express-validator';
 import { findUserByEmail, verifyPassword } from '../../models/forms/login.js';
 import { getRequestsByUser } from '../../models/requests/requests.js';
+import { loginLimiter } from '../../middleware/rate-limit.js';
 import { Router } from 'express';
 
 const router = Router();
@@ -12,12 +13,13 @@ const loginValidation = [
     body('email')
         .trim()
         .isEmail()
-        .withMessage('Please provide a valid email address')
-        .normalizeEmail(),
+        .normalizeEmail()
+        .isLength({ max: 255 })
+        .escape(),
 
     body('password')
-        .isLength({ min: 8 })
-        .withMessage('Password is required')
+        .isLength({ min: 1, max: 255 })
+        .escape()
 ];
 
 /**
@@ -37,7 +39,7 @@ const processLogin = async (req, res) => {
     const errors = validationResult(req);
 
     if (!errors.isEmpty()) {
-        console.error('Login validation errors:', errors.array());
+        // Don't log validation details — they're logged by the validator
         return res.redirect('/login');
     }
 
@@ -46,15 +48,14 @@ const processLogin = async (req, res) => {
     try {
         const user = await findUserByEmail(email);
 
+        // Generic error message — don't reveal if email exists or password is wrong
         if (!user) {
-            console.error('User not found for email:', email);
             return res.redirect('/login');
         }
 
         const passwordMatches = await verifyPassword(password, user.password);
 
         if (!passwordMatches) {
-            console.error('Invalid password for user:', email);
             return res.redirect('/login');
         }
 
@@ -156,7 +157,7 @@ const showDashboard = async (req, res, next) => {
 
 // Routes
 router.get('/', showLoginForm);
-router.post('/', loginValidation, processLogin);
+router.post('/', loginLimiter, loginValidation, processLogin);
 
 // Export router as default, and specific functions for root-level routes
 export default router;
