@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><%= title %> · Deadweight</title>
-    <link rel="icon" type="image/png" href="/images/brand/favicon.png">
     <link rel="stylesheet" href="/css/main.css">
     <%- typeof renderStyles === 'function' ? renderStyles() : '' %>
     <%- typeof renderScripts === 'function' ? renderScripts() : '' %>
@@ -13,7 +12,8 @@
     <header class="site-header">
         <div class="container">
             <a href="/" class="brand">
-                <img src="/images/brand/deadweight_wordmark_small.png" alt="Deadweight" class="brand-logo">
+                <span class="mark">DW</span>
+                <span>Deadweight</span>
             </a>
             <nav class="site-nav" aria-label="Primary">
                 <ul>
